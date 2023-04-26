@@ -1,10 +1,26 @@
 import * as GLP from 'glpower';
-import { Component } from '../Component';
+import { Material } from '../Components/Material';
+import { BuiltInComponents, Component } from '../Components/Component';
+import { Light } from '../Components/Light';
+
+export type RenderStack = {
+	light: Entity[],
+	shadowMap: Entity[],
+	deferred: Entity[],
+	forward: Entity[],
+	envMap: Entity[],
+}
 
 export type EntityUpdateEvent = {
 	time: number,
 	deltaTime: number,
-	matrix: GLP.Matrix,
+	matrix?: GLP.Matrix,
+	renderStack?: RenderStack;
+}
+
+export type EntityRenderQueue = {
+	light: [],
+	deferred: [],
 }
 
 export class Entity extends GLP.EventEmitter {
@@ -44,7 +60,41 @@ export class Entity extends GLP.EventEmitter {
 
 	public update( event: EntityUpdateEvent ) {
 
-		// update matrix
+		// stack
+
+		if ( ! event.renderStack ) event.renderStack = {
+			light: [],
+			shadowMap: [],
+			deferred: [],
+			forward: [],
+			envMap: [],
+		};
+
+		const material = this.getComponent<Material>( 'material' );
+
+		if ( material ) {
+
+			if ( material.visibility.deferred ) event.renderStack.deferred.push( this );
+			if ( material.visibility.forward ) event.renderStack.forward.push( this );
+			if ( material.visibility.envMap ) event.renderStack.envMap.push( this );
+
+		}
+
+		const light = this.getComponent<Light>( 'light' );
+
+		if ( light ) {
+
+			event.renderStack.light.push( this );
+
+		}
+
+		// matrix
+
+		if ( ! event.matrix ) event.matrix = new GLP.Matrix();
+
+		event.matrix = this.matrix;
+
+		// components
 
 		const componentEvent = { ...event, entity: this };
 
@@ -54,7 +104,7 @@ export class Entity extends GLP.EventEmitter {
 
 		} );
 
-		event.matrix = this.matrix;
+		// children
 
 		for ( let i = 0; i < this.children.length; i ++ ) {
 
@@ -62,19 +112,21 @@ export class Entity extends GLP.EventEmitter {
 
 		}
 
+		return event.renderStack;
+
 	}
 
 	/*-------------------------------
 		Components
 	-------------------------------*/
 
-	public addComponent<T extends Component>( name: string, component: Component ) {
+	public addComponent<T extends Component>( name: BuiltInComponents, component: T ) {
 
 		this.components.set( name, component );
 
 	}
 
-	public getComponent<T extends Component>( name: string ): T | undefined {
+	public getComponent<T extends Component>( name: BuiltInComponents ): T | undefined {
 
 		return this.components.get( name ) as T;
 

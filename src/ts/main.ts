@@ -10,9 +10,7 @@ class App {
 
 	constructor() {
 
-		/*-------------------------------
-			Elm
-		-------------------------------*/
+		// elms
 
 		document.body.innerHTML = `
 		<style>
@@ -26,11 +24,19 @@ class App {
 		this.canvas = document.querySelector( 'canvas' )!;
 		this.canvasWrap = this.canvas.parentElement!;
 
-		/*-------------------------------
-			Scene
-		-------------------------------*/
+		// scene
 
 		this.scene = new Scene();
+
+		// event
+
+		window.addEventListener( 'resize', this.resize.bind( this ) );
+
+		this.resize();
+
+		// animate
+
+		this.animate();
 
 	}
 
