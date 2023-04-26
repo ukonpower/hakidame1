@@ -1,6 +1,6 @@
 import * as GLP from 'glpower';
-import { blidge } from 'src/ts/Globals';
-import { Entity } from 'src/ts/libs/framework/Entity';
+import { blidge } from '~/ts/Globals';
+import { Entity } from '~/ts/libs/framework/Entity';
 
 export class Carpenter extends GLP.EventEmitter {
 

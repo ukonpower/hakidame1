@@ -24,7 +24,8 @@ export default defineConfig( {
 	},
 	resolve: {
 		alias: {
-			"glpower": path.join( __dirname, "src/ts/libs/glpower_local" )
+			"glpower": path.join( __dirname, "src/ts/libs/glpower_local" ),
+			"~": path.join( __dirname, "src" ),
 		},
 	},
 	define: {
