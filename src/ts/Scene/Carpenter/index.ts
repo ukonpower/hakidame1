@@ -1,5 +1,6 @@
 import * as GLP from 'glpower';
 import { blidge } from '~/ts/Globals';
+import { BLidgeNode } from '~/ts/libs/framework/Components/BLidgeNode';
 import { Entity } from '~/ts/libs/framework/Entity';
 
 export class Carpenter extends GLP.EventEmitter {
@@ -53,18 +54,40 @@ export class Carpenter extends GLP.EventEmitter {
 
 	private onSyncScene( blidge: GLP.BLidge ) {
 
-		const timeStamp = new Date().getTime();
+		// const timeStamp = new Date().getTime();
 
-		// create entity
+		const _ = ( param: GLP.BLidgeNodeParam ): Entity => {
 
-		blidge.objects.forEach( blidgeObject => {
-		} );
+			const obj = new Entity();
+
+			if ( this.objects.get( param.name ) ) obj.dispose();
+
+			obj.addComponent( "blidge", new BLidgeNode( param ) );
+
+			param.children.forEach( c => {
+
+				const child = _( c );
+
+				obj.add( child );
+
+			} );
+
+			return obj;
+
+		};
+
+		const root = blidge.scene && _( blidge.scene );
+
+		if ( root ) {
+
+			this.root.add( root );
+
+		}
+
+		console.log( root );
 
 		// remove
 
-	}
-
-	public update(): void {
 	}
 
 }

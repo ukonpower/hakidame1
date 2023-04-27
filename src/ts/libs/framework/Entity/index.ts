@@ -2,14 +2,7 @@ import * as GLP from 'glpower';
 import { Material } from '../Components/Material';
 import { BuiltInComponents, Component } from '../Components/Component';
 import { Light } from '../Components/Light';
-
-export type RenderStack = {
-	light: Entity[],
-	shadowMap: Entity[],
-	deferred: Entity[],
-	forward: Entity[],
-	envMap: Entity[],
-}
+import { RenderStack } from '../Renderer';
 
 export type EntityUpdateEvent = {
 	time: number,
@@ -18,12 +11,10 @@ export type EntityUpdateEvent = {
 	renderStack?: RenderStack;
 }
 
-export type EntityRenderQueue = {
-	light: [],
-	deferred: [],
-}
-
 export class Entity extends GLP.EventEmitter {
+
+	public name: string;
+	public uuid: number;
 
 	public position: GLP.Vector;
 	public rotation: GLP.Vector;
@@ -33,12 +24,16 @@ export class Entity extends GLP.EventEmitter {
 	private matrix: GLP.Matrix;
 	private matrixWorld: GLP.Matrix;
 
+	private parent: Entity | null;
 	private children: Entity[];
 	private components: Map<string, Component>;
 
 	constructor() {
 
 		super();
+
+		this.name = "";
+		this.uuid = new Date().getTime() + Math.floor( Math.random() * 1000000 );
 
 		this.position = new GLP.Vector();
 		this.rotation = new GLP.Vector();
@@ -48,6 +43,7 @@ export class Entity extends GLP.EventEmitter {
 		this.matrix = new GLP.Matrix();
 		this.matrixWorld = new GLP.Matrix();
 
+		this.parent = null;
 		this.children = [];
 
 		this.components = new Map();
@@ -92,6 +88,10 @@ export class Entity extends GLP.EventEmitter {
 
 		if ( ! event.matrix ) event.matrix = new GLP.Matrix();
 
+		this.matrix.setFromTransform( this.position, this.quaternion, this.scale );
+
+		this.matrixWorld.copy( this.matrix ).preMultiply( event.matrix );
+
 		event.matrix = this.matrix;
 
 		// components
@@ -117,10 +117,30 @@ export class Entity extends GLP.EventEmitter {
 	}
 
 	/*-------------------------------
+		SceneGraph
+	-------------------------------*/
+
+	public add( entity: Entity ) {
+
+		entity.parent = this;
+
+		this.children.push( entity );
+
+	}
+
+	public remove( entity: Entity ) {
+
+		this.children = this.children.filter( c => c.uuid != entity.uuid );
+
+	}
+
+	/*-------------------------------
 		Components
 	-------------------------------*/
 
 	public addComponent<T extends Component>( name: BuiltInComponents, component: T ) {
+
+		component.setEntity( this );
 
 		this.components.set( name, component );
 
@@ -135,6 +155,22 @@ export class Entity extends GLP.EventEmitter {
 	public removeComponent( name: string ) {
 
 		this.components.delete( name );
+
+	}
+
+	/*-------------------------------
+		Dispose
+	-------------------------------*/
+
+	public dispose() {
+
+		this.emit( "dispose" );
+
+		this.parent && this.parent.remove( this );
+
+		this.children.forEach( c => c.parent = null );
+
+		this.components.forEach( c => c.setEntity( null ) );
 
 	}
 

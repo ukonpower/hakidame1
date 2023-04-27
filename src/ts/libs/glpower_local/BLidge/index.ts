@@ -23,10 +23,10 @@ export type BLidgeObjectMessage = {
 	prm?: BLidgeCameraParam | BLidgeMeshParam | BLidgeLightParamCommon
 }
 
-export type BLidgeObject = {
+export type BLidgeNodeParam = {
 	name: string,
 	parent: string,
-	children: BLidgeObject[],
+	children: BLidgeNodeParam[],
 	animation: BLidgeAnimation,
 	position: IVector3,
 	rotation: IVector3,
@@ -145,9 +145,9 @@ export class BLidge extends EventEmitter {
 
 	// animation
 
-	public objects: BLidgeObject[] = [];
+	public objects: BLidgeNodeParam[] = [];
 	public curveGroups: FCurveGroup[] = [];
-	public scene: BLidgeObject | null;
+	public scene: BLidgeNodeParam | null;
 
 	constructor( url?: string ) {
 
@@ -257,7 +257,7 @@ export class BLidge extends EventEmitter {
 
 		this.objects.length = 0;
 
-		const _ = ( objMsg: BLidgeObjectMessage ): BLidgeObject => {
+		const _ = ( objMsg: BLidgeObjectMessage ): BLidgeNodeParam => {
 
 			const mat = { name: '', uniforms: {} };
 
@@ -268,7 +268,7 @@ export class BLidge extends EventEmitter {
 
 			}
 
-			const obj: BLidgeObject = {
+			const obj: BLidgeNodeParam = {
 				name: objMsg.n,
 				parent: objMsg.prnt,
 				children: [],

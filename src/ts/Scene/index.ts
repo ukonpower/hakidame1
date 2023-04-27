@@ -1,6 +1,7 @@
 import * as GLP from 'glpower';
-import { Entity } from '../libs/framework/Entity';
+import { Entity, Entity } from '../libs/framework/Entity';
 import { Carpenter } from './Carpenter';
+import { Renderer } from '../libs/framework/Renderer';
 
 export class Scene extends GLP.EventEmitter {
 
@@ -10,6 +11,7 @@ export class Scene extends GLP.EventEmitter {
 
 	private root: Entity;
 	private camera: Entity;
+	private renderer: Renderer;
 
 	private carpenter: Carpenter;
 
@@ -32,6 +34,10 @@ export class Scene extends GLP.EventEmitter {
 
 		this.carpenter = new Carpenter( this.root, this.camera );
 
+		// renderer
+
+		this.renderer = new Renderer();
+
 	}
 
 	public update() {
@@ -40,12 +46,12 @@ export class Scene extends GLP.EventEmitter {
 		this.deltaTime = currentTime - this.currentTime;
 		this.elapsedTime += this.deltaTime;
 
-		const stack = this.root.update( {
+		const renderStack = this.root.update( {
 			time: this.elapsedTime,
 			deltaTime: this.deltaTime,
 		} );
 
-		// console.log( stack );
+		this.renderer.update( renderStack );
 
 	}
 

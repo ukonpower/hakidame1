@@ -12,22 +12,56 @@ export type BuiltInComponents =
 	'material' |
 	'geometry' |
 	'light' |
+	'blidge' |
 ( string & {} );
 
 export class Component extends GLP.EventEmitter {
 
-	protected entity: Entity;
+	protected entity: Entity | null;
 
-	constructor( entity: Entity ) {
+	constructor( ) {
 
 		super();
 
+		this.entity = null;
+
+	}
+
+	public setEntity( entity: Entity | null ) {
+
+		if ( this.entity ) {
+
+			this.onRemoveEnpty( this.entity );
+
+		}
+
 		this.entity = entity;
+
+		if ( this.entity ) {
+
+			this.onSetEntity( this.entity );
+
+		}
 
 	}
 
 	public update( event: ComponentUpdateEvent ) {
 
+		if ( this.entity ) {
+
+			this.updateImpl( event );
+
+		}
+
+	}
+
+	protected onSetEntity( entity: Entity ) {
+	}
+
+	protected onRemoveEnpty( entity: Entity ) {
+	}
+
+	protected updateImpl( event: ComponentUpdateEvent ) {
 	}
 
 }
