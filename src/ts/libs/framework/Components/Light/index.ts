@@ -1,6 +1,6 @@
-import { Component } from "../Component";
+import { Camera } from "../Camera";
 
-export class Light extends Component {
+export class Light extends Camera {
 
 	constructor() {
 

@@ -3,6 +3,7 @@ import { Material } from '../Components/Material';
 import { BuiltInComponents, Component } from '../Components/Component';
 import { Light } from '../Components/Light';
 import { RenderStack } from '../Renderer';
+import { Camera } from '../Components/Camera';
 
 export type EntityUpdateEvent = {
 	time: number,
@@ -21,12 +22,12 @@ export class Entity extends GLP.EventEmitter {
 	public quaternion: GLP.Quaternion;
 	public scale: GLP.Vector;
 
-	private matrix: GLP.Matrix;
-	private matrixWorld: GLP.Matrix;
+	public matrix: GLP.Matrix;
+	public matrixWorld: GLP.Matrix;
 
-	private parent: Entity | null;
-	private children: Entity[];
-	private components: Map<string, Component>;
+	public parent: Entity | null;
+	public children: Entity[];
+	public components: Map<string, Component>;
 
 	constructor() {
 
@@ -59,8 +60,8 @@ export class Entity extends GLP.EventEmitter {
 		// stack
 
 		if ( ! event.renderStack ) event.renderStack = {
+			camera: [],
 			light: [],
-			shadowMap: [],
 			deferred: [],
 			forward: [],
 			envMap: [],
@@ -73,6 +74,14 @@ export class Entity extends GLP.EventEmitter {
 			if ( material.visibility.deferred ) event.renderStack.deferred.push( this );
 			if ( material.visibility.forward ) event.renderStack.forward.push( this );
 			if ( material.visibility.envMap ) event.renderStack.envMap.push( this );
+
+		}
+
+		const camera = this.getComponent<Camera>( 'camera' );
+
+		if ( camera ) {
+
+			event.renderStack.camera.push( this );
 
 		}
 

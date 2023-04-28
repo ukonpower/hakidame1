@@ -1,5 +1,5 @@
 import * as GLP from 'glpower';
-import { Entity, Entity } from '../libs/framework/Entity';
+import { Entity } from '../libs/framework/Entity';
 import { Carpenter } from './Carpenter';
 import { Renderer } from '../libs/framework/Renderer';
 
