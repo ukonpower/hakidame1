@@ -4,7 +4,6 @@
 
 void main( void ) {
 
-
-	outColor0 = vec4( 1.0 );
+	outColor0 = vec4( vNormal, 1.0 );
 
 } 

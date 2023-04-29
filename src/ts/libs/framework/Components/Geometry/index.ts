@@ -8,7 +8,8 @@ export type GeometryParam = {
 type Attribute = {
 	array: GLP.TArrayBuffer;
 	size: number;
-	__buffer?: GLP.GLPowerBuffer
+	buffer?: GLP.GLPowerBuffer
+	opt?: GLP.AttributeOptions,
 }
 
 type DefaultAttributeName = 'position' | 'uv' | 'normal' | 'index';
@@ -29,11 +30,12 @@ export class Geometry extends Component {
 
 	}
 
-	public setAttribute( name: DefaultAttributeName | ( string & {} ), array: GLP.TArrayBuffer, size: number ) {
+	public setAttribute( name: DefaultAttributeName | ( string & {} ), array: GLP.TArrayBuffer, size: number, opt: GLP.AttributeOptions ) {
 
 		this.attributes.set( name, {
 			array,
-			size
+			size,
+			opt,
 		} );
 
 		this.updateVertCount();
@@ -64,6 +66,15 @@ export class Geometry extends Component {
 
 		} );
 
+	}
+
+	public createBuffer( power: GLP.Power ) {
+
+		this.attributes.forEach( ( attr, key ) => {
+
+			attr.buffer = power.createBuffer().setData( attr.array, key == 'index' ? "ibo" : 'vbo' );
+
+		} );
 
 	}
 

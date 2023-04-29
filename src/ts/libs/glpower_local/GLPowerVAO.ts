@@ -5,7 +5,7 @@ export type Attribute = {
 	size: number;
 }
 
-type AttributeOptions = {
+export type AttributeOptions = {
 	instanceDivisor?: number;
 }
 

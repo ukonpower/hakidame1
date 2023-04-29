@@ -10,5 +10,7 @@ void main( void ) {
 	vec4 modelPosition = modelMatrix * vec4( position, 1.0 );
 	vec4 mvPosition = viewMatrix * modelPosition;
 	gl_Position = projectionMatrix * mvPosition;
+
+	vNormal = normal;
 	
 }

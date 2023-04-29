@@ -38,8 +38,8 @@ export class Entity extends GLP.EventEmitter {
 
 		this.position = new GLP.Vector();
 		this.rotation = new GLP.Vector();
-		this.quaternion = new GLP.Quaternion();
-		this.scale = new GLP.Vector();
+		this.quaternion = new GLP.Quaternion( 0.0, 0.0, 0.0, 1.0 );
+		this.scale = new GLP.Vector( 1.0, 1.0, 1.0 );
 
 		this.matrix = new GLP.Matrix();
 		this.matrixWorld = new GLP.Matrix();
@@ -95,21 +95,21 @@ export class Entity extends GLP.EventEmitter {
 
 		// matrix
 
+		this.quaternion.setFromEuler( this.rotation );
+
 		if ( ! event.matrix ) event.matrix = new GLP.Matrix();
 
 		this.matrix.setFromTransform( this.position, this.quaternion, this.scale );
 
 		this.matrixWorld.copy( this.matrix ).preMultiply( event.matrix );
 
-		event.matrix = this.matrix;
-
 		// components
 
-		const componentEvent = { ...event, entity: this };
+		const childEvent = { ...event, matrix: this.matrixWorld, entity: this, };
 
 		this.components.forEach( c => {
 
-			c.update( componentEvent );
+			c.update( childEvent );
 
 		} );
 
@@ -117,7 +117,7 @@ export class Entity extends GLP.EventEmitter {
 
 		for ( let i = 0; i < this.children.length; i ++ ) {
 
-			this.children[ i ].update( event );
+			this.children[ i ].update( childEvent );
 
 		}
 

@@ -20,9 +20,11 @@ export class Renderer {
 
 	private programManager: ProgramManager;
 
-	// tmp
-
 	private textureUnit: number = 0;
+
+	private canvasSize: GLP.Vector;
+
+	// tmp
 
 	private tmpNormalMatrix: GLP.Matrix;
 	private tmpModelViewMatrix: GLP.Matrix;
@@ -38,6 +40,8 @@ export class Renderer {
 
 		this.tmpModelViewMatrix = new GLP.Matrix();
 		this.tmpNormalMatrix = new GLP.Matrix();
+
+		this.canvasSize = new GLP.Vector();
 
 		// tmp
 
@@ -71,7 +75,7 @@ export class Renderer {
 
 			this.render( "deferred", stack.camera[ i ], stack.deferred );
 
-			this.render( "forward", stack.camera[ i ], stack.forward );
+			// this.render( "forward", s/tack.camera[ i ], stack.forward );
 
 		}
 
@@ -81,13 +85,46 @@ export class Renderer {
 
 		// }
 
+	}
 
+	public resize( canvasSize: GLP.Vector ) {
+
+		this.canvasSize.copy( canvasSize );
 
 	}
 
 	private render( materialType: MaterialType, camera: Entity, entities: Entity[] ) {
 
 		const cameraComponent = camera.getComponent<Camera>( 'camera' )!;
+
+		const renderTarget = null;
+
+		if ( renderTarget ) {
+
+			// gl.viewport( 0, 0, renderTarget.size.x, renderTarget.size.y );
+			// gl.bindFramebuffer( gl.FRAMEBUFFER, renderTarget.getFrameBuffer() );
+			// gl.drawBuffers( renderTarget.textureAttachmentList );
+
+		} else {
+
+			gl.viewport( 0, 0, this.canvasSize.x, this.canvasSize.y );
+			gl.bindFramebuffer( gl.FRAMEBUFFER, null );
+
+		}
+
+		// clear
+
+		gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
+		gl.clearDepth( 1.0 );
+		gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
+
+		// status
+
+		gl.enable( gl.CULL_FACE );
+		gl.enable( gl.DEPTH_TEST );
+		gl.disable( gl.BLEND );
+
+		// render
 
 		for ( let i = 0; i < entities.length; i ++ ) {
 
@@ -101,10 +138,10 @@ export class Renderer {
 
 			const program = this.programManager.get( vert, frag );
 
-			program.setUniform( 'modelMatrix', 'Matrix4fv', entity.matrix.elm );
-			program.setUniform( 'modelMatrixInverse', 'Matrix4fv', this.tmpModelMatrixInverse.copy( entity.matrix ).inverse().elm );
+			program.setUniform( 'modelMatrix', 'Matrix4fv', entity.matrixWorld.elm );
+			program.setUniform( 'modelMatrixInverse', 'Matrix4fv', this.tmpModelMatrixInverse.copy( entity.matrixWorld ).inverse().elm );
 
-			this.tmpModelViewMatrix.copy( entity.matrix ).preMultiply( cameraComponent.viewMatrix );
+			this.tmpModelViewMatrix.copy( entity.matrixWorld ).preMultiply( cameraComponent.viewMatrix );
 
 			this.tmpNormalMatrix.copy( this.tmpModelViewMatrix );
 			this.tmpNormalMatrix.inverse();
@@ -113,7 +150,7 @@ export class Renderer {
 			program.setUniform( 'normalMatrix', 'Matrix4fv', this.tmpNormalMatrix.elm );
 			program.setUniform( 'modelViewMatrix', 'Matrix4fv', this.tmpModelViewMatrix.elm );
 
-			program.setUniform( 'cameraMatrix', 'Matrix4fv', camera.matrix.elm );
+			program.setUniform( 'cameraMatrix', 'Matrix4fv', camera.matrixWorld.elm );
 			program.setUniform( 'viewMatrix', 'Matrix4fv', cameraComponent.viewMatrix.elm );
 			program.setUniform( 'projectionMatrix', 'Matrix4fv', cameraComponent.projectionMatrix.elm );
 			program.setUniform( 'projectionMatrixInverse', 'Matrix4fv', this.tmpProjectionMatrixInverse.copy( cameraComponent.projectionMatrix ).inverse().elm );
@@ -126,21 +163,25 @@ export class Renderer {
 
 				if ( geometryNeedsUpdate === undefined || geometryNeedsUpdate === true ) {
 
-					for ( let i = 0; i < geometry.attributes.; i ++ ) {
+					geometry.createBuffer( power );
 
-						const attr = geometry.attributes[ i ];
+					geometry.attributes.forEach( ( attr, key ) => {
 
-						vao.setAttribute( attr.name, attr.buffer, attr.size, { instanceDivisor: attr.instanceDivisor } );
+						if ( attr.buffer === undefined ) return;
 
-					}
+						if ( key == 'index' ) {
 
-					if ( geometry.index ) {
+							vao.setIndex( attr.buffer );
 
-						vao.setIndex( geometry.index.buffer );
+						} else {
 
-					}
+							vao.setAttribute( key, attr.buffer, attr.size, attr.opt );
 
-					geometry.needsUpdate.set( vao, true );
+						}
+
+					} );
+
+					geometry.needsUpdate.set( vao, false );
 
 				}
 
@@ -185,8 +226,6 @@ export class Renderer {
 			}
 
 		}
-
-		// console.log( materialType );
 
 	}
 

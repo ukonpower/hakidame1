@@ -1,4 +1,5 @@
 import * as GLP from 'glpower';
+import { canvas } from './Globals';
 import { Scene } from "./Scene";
 
 class App {
@@ -18,11 +19,13 @@ class App {
 			.cw{position:relative;width:100%;height:100%;background:#000;}
 			canvas{width:100%;height:100%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
 		</style>
-		<div class="cw"><canvas></div>
+		<div class="cw"></div>
 		`;
 
-		this.canvas = document.querySelector( 'canvas' )!;
-		this.canvasWrap = this.canvas.parentElement!;
+		this.canvasWrap = document.querySelector( '.cw' )!;
+
+		this.canvas = canvas;
+		this.canvasWrap.appendChild( this.canvas );
 
 		// scene
 

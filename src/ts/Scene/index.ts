@@ -34,7 +34,13 @@ export class Scene extends GLP.EventEmitter {
 		// root
 
 		this.root = new Entity();
+
+		// camera
+
 		this.camera = new Entity();
+		this.camera.addComponent( "camera", new Camera() );
+		this.camera.position.set( 0, 0, 5 );
+		this.root.add( this.camera );
 
 		// carpenter
 
@@ -43,18 +49,21 @@ export class Scene extends GLP.EventEmitter {
 		// debug scene
 
 		const box = new Entity();
-		box.addComponent( 'geometry', new CubeGeometry() );
-		box.addComponent( 'materi', new Material( {
-			type: [ "deferred" ],
-			vert: basicVert,
-			frag: basicFrag,
-		} ) );
+		// box.addComponent( 'geometry', new CubeGeometry() );
+		// box.addComponent( "material", new Material( {
+		// 	type: [ "deferred" ],
+		// 	vert: basicVert,
+		// 	frag: basicFrag,
+		// } ) );
 
 		this.root.add( box );
 
-		const camera = new Entity();
-		camera.addComponent( "camera", new Camera() );
-		this.root.add( camera );
+		this.on( "update", () => {
+
+			box.rotation.x += 0.1;
+			box.rotation.y += 0.05;
+
+		} );
 
 		// renderer
 
@@ -73,11 +82,20 @@ export class Scene extends GLP.EventEmitter {
 			deltaTime: this.deltaTime,
 		} );
 
+		this.emit( "update" );
+
 		this.renderer.update( renderStack );
 
 	}
 
 	public resize( size: GLP.Vector ) {
+
+		const aspect = size.x / size.y;
+
+		this.camera.getComponent<Camera>( "camera" )!.resize( aspect );
+
+		this.renderer.resize( size );
+
 	}
 
 	public dispose() {

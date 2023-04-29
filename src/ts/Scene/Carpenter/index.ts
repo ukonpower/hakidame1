@@ -1,7 +1,12 @@
 import * as GLP from 'glpower';
 import { blidge } from '~/ts/Globals';
 import { BLidgeNode } from '~/ts/libs/framework/Components/BLidgeNode';
+import { Material } from '~/ts/libs/framework/Components/Material';
 import { Entity } from '~/ts/libs/framework/Entity';
+
+import basicVert from './shaders/basic.vs';
+import basicFrag from './shaders/basic.fs';
+import { CubeGeometry } from '~/ts/libs/framework/Components/Geometry/CubeGeometry';
 
 export class Carpenter extends GLP.EventEmitter {
 
@@ -56,11 +61,23 @@ export class Carpenter extends GLP.EventEmitter {
 
 		// const timeStamp = new Date().getTime();
 
+		console.log( blidge.scene );
+
+
 		const _ = ( param: GLP.BLidgeNodeParam ): Entity => {
 
 			const obj = new Entity();
 
-			if ( this.objects.get( param.name ) ) obj.dispose();
+			if ( param.type == 'cube' ) {
+
+				obj.addComponent( 'geometry', new CubeGeometry( 2.0, 2.0, 2.0 ) );
+				obj.addComponent( "material", new Material( {
+					type: [ "deferred" ],
+					vert: basicVert,
+					frag: basicFrag,
+				} ) );
+
+			}
 
 			obj.addComponent( "blidge", new BLidgeNode( param ) );
 
@@ -78,13 +95,14 @@ export class Carpenter extends GLP.EventEmitter {
 
 		const root = blidge.scene && _( blidge.scene );
 
+		console.log( root?.children.length );
+
+
 		if ( root ) {
 
 			this.root.add( root );
 
 		}
-
-		console.log( root );
 
 		// remove
 

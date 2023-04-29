@@ -8,6 +8,11 @@ export class Camera extends Component {
 	public viewMatrix: GLP.Matrix;
 	public renderTarget: GLP.GLPowerFrameBuffer | null;
 
+	public fov: number;
+	public aspect: number;
+	public near: number;
+	public far: number;
+
 	constructor() {
 
 		super();
@@ -17,20 +22,36 @@ export class Camera extends Component {
 
 		this.renderTarget = null;
 
+		this.fov = 50;
+		this.near = 0.01;
+		this.far = 1000;
+		this.aspect = 1.0;
+
 	}
 
 	public updateProjectionMatrix() {
+
+		this.projectionMatrix.perspective( this.fov, this.aspect, this.near, this.far );
+
 	}
 
 	protected updateImpl( event: ComponentUpdateEvent ): void {
 
-		this.viewMatrix.copy( event.entity.matrix ).inverse();
+		this.viewMatrix.copy( event.entity.matrixWorld ).inverse();
 
 	}
 
 	public setRenderTarget( renderTarget: GLP.GLPowerFrameBuffer | null ) {
 
 		this.renderTarget = renderTarget;
+
+	}
+
+	public resize( aspect: number ) {
+
+		this.aspect = aspect;
+
+		this.updateProjectionMatrix();
 
 	}
 
