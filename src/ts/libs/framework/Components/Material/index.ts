@@ -1,4 +1,4 @@
-import { Component } from "../Component";
+import { Component } from "..";
 
 export type MaterialType = "depth" | "deferred" | "forward" | "envMap"
 

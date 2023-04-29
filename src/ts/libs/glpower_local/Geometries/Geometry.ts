@@ -11,6 +11,7 @@ export class Geometry {
 	public attributes: {[key: string]: Attribute} = {};
 
 	constructor() {
+
 	}
 
 	public setAttribute( name: DefaultAttributeName | ( string & {} ), array: number[], size: number ) {

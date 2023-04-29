@@ -1,7 +1,7 @@
-import { GLPowerBuffer } from "./GLPowerBuffer";
+import { GLPowerBuffer, TArrayBuffer } from "./GLPowerBuffer";
 
 export type Attribute = {
-	array: number[];
+	array: TArrayBuffer;
 	size: number;
 }
 

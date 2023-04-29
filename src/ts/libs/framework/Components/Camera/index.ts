@@ -1,6 +1,6 @@
 import * as GLP from 'glpower';
 
-import { Component, ComponentUpdateEvent } from "../Component";
+import { Component, ComponentUpdateEvent } from "..";
 
 export class Camera extends Component {
 

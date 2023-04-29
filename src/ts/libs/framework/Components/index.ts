@@ -1,5 +1,5 @@
 import * as GLP from 'glpower';
-import { Entity, EntityUpdateEvent } from '../../Entity';
+import { Entity, EntityUpdateEvent } from '../Entity';
 
 export type ComponentUpdateEvent = EntityUpdateEvent & {
 	entity: Entity

@@ -1,6 +1,6 @@
 import * as GLP from 'glpower';
 import { Material } from '../Components/Material';
-import { BuiltInComponents, Component } from '../Components/Component';
+import { BuiltInComponents, Component } from '../Components';
 import { Light } from '../Components/Light';
 import { RenderStack } from '../Renderer';
 import { Camera } from '../Components/Camera';

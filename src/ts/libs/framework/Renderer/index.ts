@@ -122,15 +122,11 @@ export class Renderer {
 
 			if ( vao ) {
 
-				if ( geometry.needsUpdate === undefined ) {
+				const geometryNeedsUpdate = geometry.needsUpdate.get( vao );
 
-					geometry.needsUpdate = new Map();
+				if ( geometryNeedsUpdate === undefined || geometryNeedsUpdate === true ) {
 
-				}
-
-				if ( ! geometry.needsUpdate.get( vao ) ) {
-
-					for ( let i = 0; i < geometry.attributes.length; i ++ ) {
+					for ( let i = 0; i < geometry.attributes.; i ++ ) {
 
 						const attr = geometry.attributes[ i ];
 
@@ -190,7 +186,7 @@ export class Renderer {
 
 		}
 
-		console.log( materialType );
+		// console.log( materialType );
 
 	}
 
