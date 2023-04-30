@@ -29,6 +29,8 @@ export class Entity extends GLP.EventEmitter {
 	public children: Entity[];
 	public components: Map<string, Component>;
 
+	public userData: any;
+
 	constructor() {
 
 		super();
@@ -48,6 +50,8 @@ export class Entity extends GLP.EventEmitter {
 		this.children = [];
 
 		this.components = new Map();
+
+		this.userData = {};
 
 	}
 

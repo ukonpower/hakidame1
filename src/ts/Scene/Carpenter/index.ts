@@ -59,10 +59,7 @@ export class Carpenter extends GLP.EventEmitter {
 
 	private onSyncScene( blidge: GLP.BLidge ) {
 
-		// const timeStamp = new Date().getTime();
-
-		console.log( blidge.scene );
-
+		const timeStamp = new Date().getTime();
 
 		const _ = ( param: GLP.BLidgeNodeParam ): Entity => {
 
@@ -94,9 +91,6 @@ export class Carpenter extends GLP.EventEmitter {
 		};
 
 		const root = blidge.scene && _( blidge.scene );
-
-		console.log( root?.children.length );
-
 
 		if ( root ) {
 
