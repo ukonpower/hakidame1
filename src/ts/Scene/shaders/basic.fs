@@ -1,10 +1,10 @@
 #include <common>
 #include <packing>
-#include <deferred_h>
+#include <frag_h>
 
 void main( void ) {
 
-
-	outColor0 = vec4( 1.0 );
+	#include <frag_in>
+	#include <frag_out>
 
 } 

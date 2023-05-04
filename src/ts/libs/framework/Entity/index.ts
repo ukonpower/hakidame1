@@ -1,15 +1,20 @@
 import * as GLP from 'glpower';
-import { Material } from '../Components/Material';
-import { BuiltInComponents, Component } from '../Components';
+import { Material, Material } from '../Components/Material';
+import { BuiltInComponents, Component, ComponentResizeEvent, ComponentUpdateEvent } from '../Components';
 import { Light } from '../Components/Light';
 import { RenderStack } from '../Renderer';
 import { Camera } from '../Components/Camera';
+import { Geometry } from '../Components/Geometry';
 
 export type EntityUpdateEvent = {
 	time: number,
 	deltaTime: number,
 	matrix?: GLP.Matrix,
 	renderStack?: RenderStack;
+}
+
+export type EntityResizeEvent = {
+	resolution: GLP.Vector
 }
 
 export class Entity extends GLP.EventEmitter {
@@ -28,6 +33,8 @@ export class Entity extends GLP.EventEmitter {
 	public parent: Entity | null;
 	public children: Entity[];
 	public components: Map<string, Component>;
+
+	public visible: boolean;
 
 	public userData: any;
 
@@ -51,6 +58,8 @@ export class Entity extends GLP.EventEmitter {
 
 		this.components = new Map();
 
+		this.visible = true;
+
 		this.userData = {};
 
 	}
@@ -61,8 +70,6 @@ export class Entity extends GLP.EventEmitter {
 
 	public update( event: EntityUpdateEvent ) {
 
-		// stack
-
 		if ( ! event.renderStack ) event.renderStack = {
 			camera: [],
 			light: [],
@@ -71,9 +78,12 @@ export class Entity extends GLP.EventEmitter {
 			envMap: [],
 		};
 
+		if ( ! this.visible ) return event.renderStack;
+
+		const geometry = this.getComponent<Geometry>( 'geometry' );
 		const material = this.getComponent<Material>( 'material' );
 
-		if ( material ) {
+		if ( geometry && material ) {
 
 			if ( material.visibility.deferred ) event.renderStack.deferred.push( this );
 			if ( material.visibility.forward ) event.renderStack.forward.push( this );
@@ -109,13 +119,17 @@ export class Entity extends GLP.EventEmitter {
 
 		// components
 
-		const childEvent = { ...event, matrix: this.matrixWorld, entity: this, };
+		const childEvent = event as ComponentUpdateEvent;
+		childEvent.entity = this;
+		childEvent.matrix = this.matrixWorld;
 
 		this.components.forEach( c => {
 
 			c.update( childEvent );
 
 		} );
+
+		this.emit( "update", [ event ] );
 
 		// children
 
@@ -126,6 +140,31 @@ export class Entity extends GLP.EventEmitter {
 		}
 
 		return event.renderStack;
+
+	}
+
+	/*-------------------------------
+		Resize
+	-------------------------------*/
+
+	public resize( event: EntityResizeEvent ) {
+
+		this.components.forEach( c => {
+
+			const cEvent = event as ComponentResizeEvent;
+			cEvent.entity = this;
+
+			c.resize( cEvent );
+
+		} );
+
+		this.emit( "resize", [ event ] );
+
+		for ( let i = 0; i < this.children.length; i ++ ) {
+
+			this.children[ i ].resize( event );
+
+		}
 
 	}
 
@@ -156,6 +195,8 @@ export class Entity extends GLP.EventEmitter {
 		component.setEntity( this );
 
 		this.components.set( name, component );
+
+		return component;
 
 	}
 

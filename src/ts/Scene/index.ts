@@ -1,5 +1,5 @@
 import * as GLP from 'glpower';
-import { Entity } from '../libs/framework/Entity';
+import { Entity, EntityResizeEvent } from '../libs/framework/Entity';
 import { Carpenter } from './Carpenter';
 import { Renderer } from '../libs/framework/Renderer';
 import { Material } from '../libs/framework/Components/Material';
@@ -8,6 +8,7 @@ import basicVert from './shaders/basic.vs';
 import basicFrag from './shaders/basic.fs';
 import { CubeGeometry } from '../libs/framework/Components/Geometry/CubeGeometry';
 import { Camera } from '../libs/framework/Components/Camera';
+import { gl, power } from '../Globals';
 
 export class Scene extends GLP.EventEmitter {
 
@@ -37,8 +38,31 @@ export class Scene extends GLP.EventEmitter {
 
 		// camera
 
+		const gBuffer = new GLP.GLPowerFrameBuffer( gl );
+		gBuffer.setTexture( [
+			power.createTexture().setting( { type: gl.FLOAT, internalFormat: gl.RGBA32F, format: gl.RGBA } ),
+			power.createTexture().setting( { type: gl.FLOAT, internalFormat: gl.RGBA32F, format: gl.RGBA } ),
+			power.createTexture(),
+			power.createTexture(),
+		] );
+
+		const outBuffer = new GLP.GLPowerFrameBuffer( gl );
+		outBuffer.setDepthBuffer( gBuffer.depthRenderBuffer );
+		outBuffer.setTexture( [ power.createTexture() ] );
+
+		const transparencyBuffer = new GLP.GLPowerFrameBuffer( gl, { disableDepthBuffer: true } );
+		outBuffer.setTexture( [ power.createTexture() ] );
+
+		this.root.on( 'resize', ( event: EntityResizeEvent ) => {
+
+			gBuffer.setSize( event.resolution );
+			outBuffer.setSize( event.resolution );
+			transparencyBuffer.setSize( event.resolution );
+
+		} );
+
 		this.camera = new Entity();
-		this.camera.addComponent( "camera", new Camera() );
+		this.camera.addComponent( "camera", new Camera( { renderTarget: { gBuffer, outBuffer, transparencyBuffer } } ) );
 		this.camera.position.set( 0, 0, 5 );
 		this.root.add( this.camera );
 
@@ -49,12 +73,12 @@ export class Scene extends GLP.EventEmitter {
 		// debug scene
 
 		const box = new Entity();
-		// box.addComponent( 'geometry', new CubeGeometry() );
-		// box.addComponent( "material", new Material( {
-		// 	type: [ "deferred" ],
-		// 	vert: basicVert,
-		// 	frag: basicFrag,
-		// } ) );
+		box.addComponent( 'geometry', new CubeGeometry() );
+		box.addComponent( "material", new Material( {
+			type: [ "deferred" ],
+			vert: basicVert,
+			frag: basicFrag,
+		} ) );
 
 		this.root.add( box );
 
@@ -90,9 +114,9 @@ export class Scene extends GLP.EventEmitter {
 
 	public resize( size: GLP.Vector ) {
 
-		const aspect = size.x / size.y;
-
-		this.camera.getComponent<Camera>( "camera" )!.resize( aspect );
+		this.root.resize( {
+			resolution: size
+		} );
 
 		this.renderer.resize( size );
 

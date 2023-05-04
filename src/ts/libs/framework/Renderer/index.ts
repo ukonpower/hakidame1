@@ -3,10 +3,16 @@ import * as GLP from 'glpower';
 import { gl, power } from "~/ts/Globals";
 import { Camera } from "../Components/Camera";
 import { Geometry } from "../Components/Geometry";
-import { Material, MaterialType } from "../Components/Material";
+import { Material, MaterialRenderType } from "../Components/Material";
 import { Entity } from "../Entity";
 import { ProgramManager } from "./ProgramManager";
 import { shaderParse } from "./ShaderParser";
+
+import { PlaneGeometry } from '../Components/Geometry/PlaneGeometry';
+import { PostProcess } from '../Components/PostProcess';
+import { PostProcessPass } from '../Components/PostProcessPass';
+
+import deferredShadingFrag from './shaders/deferredShading.fs';
 
 export type RenderStack = {
 	light: Entity[],
@@ -32,16 +38,37 @@ export class Renderer {
 	private tmpModelMatrixInverse: GLP.Matrix;
 	private tmpProjectionMatrixInverse: GLP.Matrix;
 
+	// deferred
+
+	private deferredRenderPipeline: PostProcess;
+
+	// quad
+
+	private quad: Geometry;
+
 	constructor() {
 
 		this.programManager = new ProgramManager( power );
+		this.canvasSize = new GLP.Vector();
 
 		// matrix
 
 		this.tmpModelViewMatrix = new GLP.Matrix();
 		this.tmpNormalMatrix = new GLP.Matrix();
 
-		this.canvasSize = new GLP.Vector();
+		// deferred
+
+		this.deferredRenderPipeline = new PostProcess( { passes: [
+			new PostProcessPass( {
+				input: [],
+				renderTarget: null,
+				frag: deferredShadingFrag,
+			} )
+		] } );
+
+		// quad
+
+		this.quad = new PlaneGeometry();
 
 		// tmp
 
@@ -73,9 +100,15 @@ export class Renderer {
 
 		for ( let i = 0; i < stack.camera.length; i ++ ) {
 
-			this.render( "deferred", stack.camera[ i ], stack.deferred );
+			const camera = stack.camera[ i ];
 
-			// this.render( "forward", s/tack.camera[ i ], stack.forward );
+			this.renderCamera( "deferred", camera, stack.deferred );
+
+			this.draw( "deferredShading", "postprocess", this.quad, this.deferredRenderPipeline );
+
+			// deferred shading
+
+			this.renderCamera( "forward", camera, stack.forward );
 
 		}
 
@@ -93,17 +126,20 @@ export class Renderer {
 
 	}
 
-	private render( materialType: MaterialType, camera: Entity, entities: Entity[] ) {
+	private renderCamera( renderType: MaterialRenderType, camera: Entity, entities: Entity[] ) {
 
 		const cameraComponent = camera.getComponent<Camera>( 'camera' )!;
 
-		const renderTarget = null;
+		let renderTarget = null;
+
+		if ( renderType == 'deferred' ) renderTarget = cameraComponent.renderTarget.gBuffer;
+		else if ( renderType == 'forward' ) renderTarget = cameraComponent.renderTarget.outBuffer;
 
 		if ( renderTarget ) {
 
-			// gl.viewport( 0, 0, renderTarget.size.x, renderTarget.size.y );
-			// gl.bindFramebuffer( gl.FRAMEBUFFER, renderTarget.getFrameBuffer() );
-			// gl.drawBuffers( renderTarget.textureAttachmentList );
+			gl.viewport( 0, 0, renderTarget.size.x, renderTarget.size.y );
+			gl.bindFramebuffer( gl.FRAMEBUFFER, renderTarget.getFrameBuffer() );
+			gl.drawBuffers( renderTarget.textureAttachmentList );
 
 		} else {
 
@@ -118,112 +154,155 @@ export class Renderer {
 		gl.clearDepth( 1.0 );
 		gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
 
+		// render
+
+		for ( let i = 0; i < entities.length; i ++ ) {
+
+			const entity = entities[ i ];
+			const material = entity.getComponent<Material>( "material" )!;
+			const geometry = entity.getComponent<Geometry>( "geometry" )!;
+
+			this.draw( entity.uuid.toString(), renderType, geometry, material, {
+				modelMatrixWorld: entity.matrixWorld,
+				cameraMatrixWorld: camera.matrixWorld,
+				viewMatrix: cameraComponent.viewMatrix,
+				projectionMatrix: cameraComponent.projectionMatrix,
+			} );
+
+		}
+
+	}
+
+	private draw( drawId: string, renderType: MaterialRenderType, geometry: Geometry, material: Material, matrix?: { modelMatrixWorld?: GLP.Matrix, viewMatrix?: GLP.Matrix, projectionMatrix?: GLP.Matrix, cameraMatrixWorld?: GLP.Matrix } ) {
+
+		if ( ! material.visibility[ renderType ] ) return;
+
 		// status
 
 		gl.enable( gl.CULL_FACE );
 		gl.enable( gl.DEPTH_TEST );
 		gl.disable( gl.BLEND );
 
-		// render
+		const defines = { ...material.defines };
 
-		for ( let i = 0; i < entities.length; i ++ ) {
+		if ( renderType == 'deferred' ) defines.IS_DEFERRED = "";
+		else if ( renderType == 'forward' || renderType == 'envMap' ) defines.IS_FORWARD = "";
+		else if ( renderType == 'depth' ) defines.IS_DEPTH = "";
 
-			const entity = entities[ i ];
+		const vert = shaderParse( material.vert, defines );
+		const frag = shaderParse( material.frag, defines );
 
-			const material = entity.getComponent<Material>( "material" )!;
-			const geometry = entity.getComponent<Geometry>( "geometry" )!;
+		const program = this.programManager.get( vert, frag );
 
-			const vert = shaderParse( material.vert, {} );
-			const frag = shaderParse( material.frag, {} );
+		if ( matrix ) {
 
-			const program = this.programManager.get( vert, frag );
+			if ( matrix.modelMatrixWorld ) {
 
-			program.setUniform( 'modelMatrix', 'Matrix4fv', entity.matrixWorld.elm );
-			program.setUniform( 'modelMatrixInverse', 'Matrix4fv', this.tmpModelMatrixInverse.copy( entity.matrixWorld ).inverse().elm );
+				program.setUniform( 'modelMatrix', 'Matrix4fv', matrix.modelMatrixWorld.elm );
+				program.setUniform( 'modelMatrixInverse', 'Matrix4fv', this.tmpModelMatrixInverse.copy( matrix.modelMatrixWorld ).inverse().elm );
 
-			this.tmpModelViewMatrix.copy( entity.matrixWorld ).preMultiply( cameraComponent.viewMatrix );
+				if ( matrix.viewMatrix ) {
 
-			this.tmpNormalMatrix.copy( this.tmpModelViewMatrix );
-			this.tmpNormalMatrix.inverse();
-			this.tmpNormalMatrix.transpose();
+					this.tmpModelViewMatrix.copy( matrix.modelMatrixWorld ).preMultiply( matrix.viewMatrix );
+					this.tmpNormalMatrix.copy( this.tmpModelViewMatrix );
+					this.tmpNormalMatrix.inverse();
+					this.tmpNormalMatrix.transpose();
 
-			program.setUniform( 'normalMatrix', 'Matrix4fv', this.tmpNormalMatrix.elm );
-			program.setUniform( 'modelViewMatrix', 'Matrix4fv', this.tmpModelViewMatrix.elm );
-
-			program.setUniform( 'cameraMatrix', 'Matrix4fv', camera.matrixWorld.elm );
-			program.setUniform( 'viewMatrix', 'Matrix4fv', cameraComponent.viewMatrix.elm );
-			program.setUniform( 'projectionMatrix', 'Matrix4fv', cameraComponent.projectionMatrix.elm );
-			program.setUniform( 'projectionMatrixInverse', 'Matrix4fv', this.tmpProjectionMatrixInverse.copy( cameraComponent.projectionMatrix ).inverse().elm );
-
-			const vao = program.getVAO( entity.uuid.toString() );
-
-			if ( vao ) {
-
-				const geometryNeedsUpdate = geometry.needsUpdate.get( vao );
-
-				if ( geometryNeedsUpdate === undefined || geometryNeedsUpdate === true ) {
-
-					geometry.createBuffer( power );
-
-					geometry.attributes.forEach( ( attr, key ) => {
-
-						if ( attr.buffer === undefined ) return;
-
-						if ( key == 'index' ) {
-
-							vao.setIndex( attr.buffer );
-
-						} else {
-
-							vao.setAttribute( key, attr.buffer, attr.size, attr.opt );
-
-						}
-
-					} );
-
-					geometry.needsUpdate.set( vao, false );
+					program.setUniform( 'modelViewMatrix', 'Matrix4fv', this.tmpModelViewMatrix.elm );
+					program.setUniform( 'normalMatrix', 'Matrix4fv', this.tmpNormalMatrix.elm );
 
 				}
 
-				// draw
+			}
 
-				program.use( () => {
+			if ( matrix.viewMatrix ) {
 
-					program.uploadUniforms();
+				program.setUniform( 'viewMatrix', 'Matrix4fv', matrix.viewMatrix.elm );
 
-					gl.bindVertexArray( vao.getVAO() );
+			}
 
-					if ( vao.instanceCount > 0 ) {
+			if ( matrix.projectionMatrix ) {
 
-						if ( vao.indexBuffer ) {
+				program.setUniform( 'projectionMatrix', 'Matrix4fv', matrix.projectionMatrix.elm );
+				program.setUniform( 'projectionMatrixInverse', 'Matrix4fv', this.tmpProjectionMatrixInverse.copy( matrix.projectionMatrix ).inverse().elm );
 
-							gl.drawElementsInstanced( gl.TRIANGLES, vao.indexCount, gl.UNSIGNED_SHORT, 0, vao.instanceCount );
+			}
 
-						} else {
+			if ( matrix.cameraMatrixWorld ) {
 
-							gl.drawArraysInstanced( gl.TRIANGLES, 0, vao.vertCount, vao.instanceCount );
+				program.setUniform( 'cameraMatrix', 'Matrix4fv', matrix.cameraMatrixWorld.elm );
 
-						}
+			}
+
+		}
+
+		const vao = program.getVAO( drawId.toString() );
+
+		if ( vao ) {
+
+			const geometryNeedsUpdate = geometry.needsUpdate.get( vao );
+
+			if ( geometryNeedsUpdate === undefined || geometryNeedsUpdate === true ) {
+
+				geometry.createBuffer( power );
+
+				geometry.attributes.forEach( ( attr, key ) => {
+
+					if ( attr.buffer === undefined ) return;
+
+					if ( key == 'index' ) {
+
+						vao.setIndex( attr.buffer );
 
 					} else {
 
-						if ( vao.indexBuffer ) {
-
-							gl.drawElements( gl.TRIANGLES, vao.indexCount, gl.UNSIGNED_SHORT, 0 );
-
-						} else {
-
-							gl.drawArrays( gl.TRIANGLES, 0, vao.vertCount );
-
-						}
+						vao.setAttribute( key, attr.buffer, attr.size, attr.opt );
 
 					}
 
-					gl.bindVertexArray( null );
-
 				} );
 
+				geometry.needsUpdate.set( vao, false );
+
 			}
+
+			// draw
+
+			program.use( () => {
+
+				program.uploadUniforms();
+
+				gl.bindVertexArray( vao.getVAO() );
+
+				if ( vao.instanceCount > 0 ) {
+
+					if ( vao.indexBuffer ) {
+
+						gl.drawElementsInstanced( gl.TRIANGLES, vao.indexCount, gl.UNSIGNED_SHORT, 0, vao.instanceCount );
+
+					} else {
+
+						gl.drawArraysInstanced( gl.TRIANGLES, 0, vao.vertCount, vao.instanceCount );
+
+					}
+
+				} else {
+
+					if ( vao.indexBuffer ) {
+
+						gl.drawElements( gl.TRIANGLES, vao.indexCount, gl.UNSIGNED_SHORT, 0 );
+
+					} else {
+
+						gl.drawArrays( gl.TRIANGLES, 0, vao.vertCount );
+
+					}
+
+				}
+
+				gl.bindVertexArray( null );
+
+			} );
 
 		}
 

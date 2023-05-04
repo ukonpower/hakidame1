@@ -54,7 +54,7 @@ class App {
 
 	private resize() {
 
-		const scale = 1.0;
+		const scale = 0.3;
 		const width = 1920 * scale, height = 1080 * scale;
 		const aspect = width / height;
 

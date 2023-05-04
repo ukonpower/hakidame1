@@ -1,38 +1,44 @@
 import { Component } from "..";
 
-export type MaterialType = "depth" | "deferred" | "forward" | "envMap"
+export type MaterialRenderType = "depth" | "deferred" | "forward" | "envMap" | 'postprocess'
 
-type MaterialVisiblity = {[K in MaterialType]: boolean}
+type MaterialVisiblity = {[K in MaterialRenderType]: boolean}
+type MaterialDefines = {[key: string]: any};
 
 export type MaterialParam = {
-	type: MaterialType[],
+	type?: MaterialRenderType[],
 	frag: string,
 	vert: string,
+	defines?: MaterialDefines
 }
 
 export class Material extends Component {
 
-	public type: MaterialType[];
+	public type: MaterialRenderType[];
 	public visibility: MaterialVisiblity;
 
 	public vert: string;
 	public frag: string;
+	public defines: MaterialDefines;
 
 	constructor( opt: MaterialParam ) {
 
 		super();
 
-		this.type = opt.type;
+		this.type = opt.type || [];
 
 		this.visibility = {
-			depth: opt.type.indexOf( 'deferred' ) > - 1,
-			deferred: opt.type.indexOf( 'deferred' ) > - 1,
-			forward: opt.type.indexOf( 'forward' ) > - 1,
-			envMap: opt.type.indexOf( 'envMap' ) > - 1
+			depth: this.type.indexOf( 'deferred' ) > - 1,
+			deferred: this.type.indexOf( 'deferred' ) > - 1,
+			forward: this.type.indexOf( 'forward' ) > - 1,
+			envMap: this.type.indexOf( 'envMap' ) > - 1,
+			postprocess: this.type.indexOf( 'postprocess' ) > - 1,
 		};
 
 		this.vert = opt.vert;
 		this.frag = opt.frag;
+
+		this.defines = opt.defines || {};
 
 	}
 

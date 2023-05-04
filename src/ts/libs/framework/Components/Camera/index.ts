@@ -1,30 +1,44 @@
 import * as GLP from 'glpower';
 
-import { Component, ComponentUpdateEvent } from "..";
+import { Component, ComponentResizeEvent, ComponentUpdateEvent } from "..";
 
+type CameraRenderTarget = {
+	gBuffer: GLP.GLPowerFrameBuffer,
+	outBuffer: GLP.GLPowerFrameBuffer,
+	transparencyBuffer: GLP.GLPowerFrameBuffer,
+}
+
+export interface CameraParam {
+	renderTarget: CameraRenderTarget,
+	fov?: number;
+	near?: number;
+	far?: number;
+}
 export class Camera extends Component {
 
 	public projectionMatrix: GLP.Matrix;
 	public viewMatrix: GLP.Matrix;
-	public renderTarget: GLP.GLPowerFrameBuffer | null;
+	public renderTarget: CameraRenderTarget;
 
 	public fov: number;
 	public aspect: number;
 	public near: number;
 	public far: number;
 
-	constructor() {
+	constructor( param: CameraParam ) {
 
 		super();
+
+		param = param || {};
 
 		this.viewMatrix = new GLP.Matrix();
 		this.projectionMatrix = new GLP.Matrix();
 
-		this.renderTarget = null;
+		this.renderTarget = param.renderTarget;
 
-		this.fov = 50;
-		this.near = 0.01;
-		this.far = 1000;
+		this.fov = param.fov || 50;
+		this.near = param.near || 0.01;
+		this.far = param.far || 1000;
 		this.aspect = 1.0;
 
 	}
@@ -41,18 +55,7 @@ export class Camera extends Component {
 
 	}
 
-	public setRenderTarget( renderTarget: GLP.GLPowerFrameBuffer | null ) {
-
-		this.renderTarget = renderTarget;
-
-	}
-
-	public resize( aspect: number ) {
-
-		this.aspect = aspect;
-
-		this.updateProjectionMatrix();
-
+	protected resizeImpl( event: ComponentResizeEvent ): void {
 	}
 
 }

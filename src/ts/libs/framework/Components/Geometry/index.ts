@@ -30,7 +30,7 @@ export class Geometry extends Component {
 
 	}
 
-	public setAttribute( name: DefaultAttributeName | ( string & {} ), array: GLP.TArrayBuffer, size: number, opt: GLP.AttributeOptions ) {
+	public setAttribute( name: DefaultAttributeName | ( string & {} ), array: GLP.TArrayBuffer, size: number, opt?: GLP.AttributeOptions ) {
 
 		this.attributes.set( name, {
 			array,
