@@ -89,8 +89,11 @@ export class Scene extends GLP.EventEmitter {
 		light.addComponent<Light>( 'light', new Light( {
 			type: "spot",
 			useShadowMap: true,
+			angle: 100,
+			blend: 0.5,
 		} ) );
-		light.position.set( 0, 2, 0 );
+
+		light.position.set( 0, 5, 0 );
 
 		this.root.add( light );
 

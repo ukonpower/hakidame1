@@ -21,6 +21,6 @@ uniform mat4 projectionMatrix;
 #endif
 
 #if defined(IS_FORWARD) || defined(IS_DEPTH)
-	layout (location = 0) out vec4 outColor;
+	layout (location = 0) out vec4 outColor0;
 #endif
 //]

@@ -169,7 +169,7 @@ export class Renderer {
 				cameraMatrixWorld: cameraEntity.matrixWorld
 			};
 
-			this.renderCamera( "deferred", cameraComponent.renderTarget.gBuffer, cameraMatirx, stack.deferred, true );
+			this.renderCamera( "deferred", cameraComponent.renderTarget.gBuffer, cameraMatirx, stack.deferred );
 
 			this.deferredShadingPostprocess.passes[ 0 ].input = cameraComponent.renderTarget.gBuffer.textures;
 			this.deferredShadingPostprocess.passes[ 0 ].renderTarget = cameraComponent.renderTarget.outBuffer;
@@ -180,7 +180,7 @@ export class Renderer {
 				cameraMatrixWorld: cameraEntity.matrixWorld,
 			}, );
 
-			this.renderCamera( "forward", cameraComponent.renderTarget.outBuffer, cameraMatirx, stack.forward );
+			this.renderCamera( "forward", cameraComponent.renderTarget.outBuffer, cameraMatirx, stack.forward, false );
 
 			const postProcess = cameraEntity.getComponent<PostProcess>( 'postprocess' );
 
@@ -194,7 +194,7 @@ export class Renderer {
 
 	}
 
-	private renderCamera( renderType: MaterialRenderType, renderTarget: GLP.GLPowerFrameBuffer | null, cameraMatirx: CameraMatrix, entities: Entity[], clear?:boolean ) {
+	private renderCamera( renderType: MaterialRenderType, renderTarget: GLP.GLPowerFrameBuffer | null, cameraMatirx: CameraMatrix, entities: Entity[], clear:boolean = true ) {
 
 		if ( renderTarget ) {
 
@@ -241,7 +241,7 @@ export class Renderer {
 		const info: LightInfo = {
 			position: new GLP.Vector( 0.0, 0.0, 0.0, 1.0 ).applyMatrix4( lightEntity.matrixWorld ),
 			direction: new GLP.Vector( 0.0, 1.0, 0.0, 0.0 ).applyMatrix4( lightEntity.matrixWorld ).normalize(),
-			color: new GLP.Vector( lightComponent.color.x, lightComponent.color.y, lightComponent.color.z ).multiply( lightComponent.intensity ),
+			color: new GLP.Vector( lightComponent.color.x, lightComponent.color.y, lightComponent.color.z ).multiply( lightComponent.intensity * Math.PI ),
 			component: lightComponent,
 		};
 
@@ -407,7 +407,7 @@ export class Renderer {
 				program.setUniform( 'spotLight[' + i + '].position', '3fv', sLight.position.getElm( 'vec3' ) );
 				program.setUniform( 'spotLight[' + i + '].direction', '3fv', sLight.direction.getElm( 'vec3' ) );
 				program.setUniform( 'spotLight[' + i + '].color', '3fv', sLight.color.getElm( 'vec3' ) );
-				program.setUniform( 'spotLight[' + i + '].angle', '1fv', [ sLight.component.angle ] );
+				program.setUniform( 'spotLight[' + i + '].angle', '1fv', [ Math.cos( sLight.component.angle / 2 ) ] );
 				program.setUniform( 'spotLight[' + i + '].blend', '1fv', [ sLight.component.blend ] );
 				program.setUniform( 'spotLight[' + i + '].distance', '1fv', [ sLight.component.distance ] );
 				program.setUniform( 'spotLight[' + i + '].decay', '1fv', [ sLight.component.decay ] );

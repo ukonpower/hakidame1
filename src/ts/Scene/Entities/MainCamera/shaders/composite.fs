@@ -46,12 +46,6 @@ void main( void ) {
 	// 	col += texture( uBloomTexture[ LOOP_INDEX ], uv ).xyz * ( 0.3 + float(LOOP_INDEX) * 0.5 ) * 0.4;
 	// #pragma loop_end
 
-	col *= 1.2;
-	vec3 emi = max( vec3(0.0), col.xyz - 1.0 );
-	col.xyz = filmic(col.xyz);
-	col.xyz *= vec3( 0.92, 0.97, 1.0 );
-	col.xyz += emi;
-
 	col *= smoothstep( 0.9, 0.3, len );
 
 	outColor = vec4( col, 1.0 );

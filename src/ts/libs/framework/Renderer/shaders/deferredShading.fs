@@ -11,8 +11,8 @@ uniform sampler2D sampler2; // albedo, roughness
 uniform sampler2D sampler3; // emission, metalic
 
 uniform vec3 uColor;
-uniform vec3 uRenderCameraPosition;
 uniform mat4 viewMatrix;
+uniform mat4 cameraMatrix;
 
 // varyings
 
@@ -41,7 +41,7 @@ void main( void ) {
 		tex0.xyz,
 		tex1.xyz,
 		0.0,
-		normalize( uRenderCameraPosition - tex0.xyz ),
+		normalize( vec3( cameraMatrix[3][0], cameraMatrix[3][1], cameraMatrix[3][2] ) - tex0.xyz ),
 		vec3( 0.0 )
 	);
 	
@@ -78,7 +78,6 @@ void main( void ) {
 			light.color = dLight.color;
 
 			outColor += RE( geo, mat, light ) * shadow;
-
 		#pragma loop_end
 	
 	#endif
@@ -116,7 +115,7 @@ void main( void ) {
 			light.direction = spotDirection;
 			light.color = sLight.color * spotAttenuation * pow( clamp( 1.0 - spotDistance / sLight.distance, 0.0, 1.0 ),  sLight.decay );
 
-			outColor += RE( geo, mat, light ) * shadow;
+			outColor += RE( geo, mat, light );// * shadow;
 
 		#pragma loop_end
 	
