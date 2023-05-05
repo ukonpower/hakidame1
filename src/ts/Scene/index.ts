@@ -10,6 +10,7 @@ import basicVert from './shaders/basic.vs';
 import basicFrag from './shaders/basic.fs';
 
 import { MainCamera } from './Entities/MainCamera';
+import { Light } from '../libs/framework/Components/Light';
 
 
 export class Scene extends GLP.EventEmitter {
@@ -80,8 +81,19 @@ export class Scene extends GLP.EventEmitter {
 			vert: basicVert,
 			frag: basicFrag,
 		} ) );
-
 		this.root.add( box );
+
+		// light
+
+		const light = new Entity();
+		light.addComponent<Light>( 'light', new Light( {
+			type: "spot",
+			useShadowMap: true,
+		} ) );
+		light.position.set( 0, 2, 0 );
+
+		this.root.add( light );
+
 
 		this.on( "update", () => {
 

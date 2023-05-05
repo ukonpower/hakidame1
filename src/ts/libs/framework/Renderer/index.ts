@@ -1,7 +1,6 @@
 import * as GLP from 'glpower';
 
 import { gl, power } from "~/ts/Globals";
-import { Camera } from "../Components/Camera";
 import { Geometry } from "../Components/Geometry";
 import { Material, MaterialRenderType } from "../Components/Material";
 import { Entity } from "../Entity";
@@ -12,25 +11,40 @@ import { PlaneGeometry } from '../Components/Geometry/PlaneGeometry';
 import { PostProcess } from '../Components/PostProcess';
 import { PostProcessPass } from '../Components/PostProcessPass';
 
-import deferredShadingFrag from './shaders/deferredShading.fs';
+import { RenderCamera } from '../Components/Camera/RenderCamera';
 import { Light } from '../Components/Light';
 
+import deferredShadingFrag from './shaders/deferredShading.fs';
+
 export type RenderStack = {
-	light: Entity[],
-	camera: Entity[],
-	envMap: Entity[],
-	shadowMap: Entity[],
-	deferred: Entity[],
-	forward: Entity[],
+	light: Entity[];
+	camera: Entity[];
+	envMap: Entity[];
+	shadowMap: Entity[];
+	deferred: Entity[];
+	forward: Entity[];
 }
 
-export type Lights = {
-	needsUpdate: boolean
-	directionalLight: {direction: GLP.Vector, color: GLP.Vector}[],
-	directionalLightShadow: ( ShadowMapCamera | null )[]
-	spotLight: {position: GLP.Vector, direction: GLP.Vector, color: GLP.Vector, angle: number, blend: number, distance: number, decay: number}[],
-	spotLightShadow: ( ShadowMapCamera | null )[]
+type LightInfo = {
+	position: GLP.Vector;
+	direction: GLP.Vector;
+	color: GLP.Vector;
+	component: Light;
 }
+
+export type CollectedLights = {
+	needsUpdate: boolean;
+	directionalLight: LightInfo[];
+	spotLight: LightInfo[];
+}
+
+type CameraMatrix = {
+	viewMatrix?: GLP.Matrix;
+	projectionMatrix?: GLP.Matrix;
+	cameraMatrixWorld?: GLP.Matrix;
+}
+
+type RenderMatrix = CameraMatrix & { modelMatrixWorld?: GLP.Matrix }
 
 export class Renderer {
 
@@ -40,13 +54,9 @@ export class Renderer {
 
 	private canvasSize: GLP.Vector;
 
-	// tmp
+	// lights
 
-	private tmpNormalMatrix: GLP.Matrix;
-	private tmpModelViewMatrix: GLP.Matrix;
-	private tmpLightDirection: GLP.Vector;
-	private tmpModelMatrixInverse: GLP.Matrix;
-	private tmpProjectionMatrixInverse: GLP.Matrix;
+	private lights: CollectedLights;
 
 	// deferred
 
@@ -56,16 +66,26 @@ export class Renderer {
 
 	private quad: Geometry;
 
+	// tmp
+
+	private tmpNormalMatrix: GLP.Matrix;
+	private tmpModelViewMatrix: GLP.Matrix;
+	private tmpLightDirection: GLP.Vector;
+	private tmpModelMatrixInverse: GLP.Matrix;
+	private tmpProjectionMatrixInverse: GLP.Matrix;
 
 	constructor() {
 
 		this.programManager = new ProgramManager( power );
 		this.canvasSize = new GLP.Vector();
 
-		// matrix
+		// lights
 
-		this.tmpModelViewMatrix = new GLP.Matrix();
-		this.tmpNormalMatrix = new GLP.Matrix();
+		this.lights = {
+			needsUpdate: false,
+			directionalLight: [],
+			spotLight: [],
+		};
 
 		// deferred
 
@@ -85,6 +105,8 @@ export class Renderer {
 		this.tmpLightDirection = new GLP.Vector();
 		this.tmpModelMatrixInverse = new GLP.Matrix();
 		this.tmpProjectionMatrixInverse = new GLP.Matrix();
+		this.tmpModelViewMatrix = new GLP.Matrix();
+		this.tmpNormalMatrix = new GLP.Matrix();
 
 	}
 
@@ -92,22 +114,39 @@ export class Renderer {
 
 		// light
 
+		const shadowMapLightList: Entity[] = [];
+
+		this.lights.directionalLight.length = 0;
+		this.lights.spotLight.length = 0;
+
 		for ( let i = 0; i < stack.light.length; i ++ ) {
 
-			const l = stack.light[ i ];
+			const light = stack.light[ i ];
 
-			this.collectLight( l );
+			if ( this.collectLight( light ) ) {
+
+				shadowMapLightList.push( light );
+
+			}
 
 		}
 
-
 		// shadowmap
 
-		for ( let i = 0; i < stack.light.length; i ++ ) {
+		for ( let i = 0; i < shadowMapLightList.length; i ++ ) {
 
-			const l = stack.light[ i ];
+			const lightEntity = shadowMapLightList[ i ];
+			const lightComponent = lightEntity.getComponent<Light>( 'light' )!;
 
-			this.renderCamera( "shadowMap", l, l.getComponent<Light>( 'light' )!, stack.shadowMap );
+			if ( lightComponent.renderTarget ) {
+
+				this.renderCamera( "shadowMap", lightComponent.renderTarget, {
+					viewMatrix: lightComponent.viewMatrix,
+					projectionMatrix: lightComponent.projectionMatrix,
+					cameraMatrixWorld: lightEntity.matrixWorld,
+				}, stack.shadowMap );
+
+			}
 
 		}
 
@@ -122,16 +161,26 @@ export class Renderer {
 		for ( let i = 0; i < stack.camera.length; i ++ ) {
 
 			const cameraEntity = stack.camera[ i ];
-			const cameraComponent = cameraEntity.getComponent<Camera>( 'camera' )!;
+			const cameraComponent = cameraEntity.getComponent<RenderCamera>( 'camera' )!;
 
-			this.renderCamera( "deferred", cameraEntity, cameraComponent, stack.deferred );
+			const cameraMatirx: CameraMatrix = {
+				viewMatrix: cameraComponent.viewMatrix,
+				projectionMatrix: cameraComponent.projectionMatrix,
+				cameraMatrixWorld: cameraEntity.matrixWorld
+			};
+
+			this.renderCamera( "deferred", cameraComponent.renderTarget.gBuffer, cameraMatirx, stack.deferred, true );
 
 			this.deferredShadingPostprocess.passes[ 0 ].input = cameraComponent.renderTarget.gBuffer.textures;
 			this.deferredShadingPostprocess.passes[ 0 ].renderTarget = cameraComponent.renderTarget.outBuffer;
 
-			this.renderPostProcess( this.deferredShadingPostprocess );
+			this.renderPostProcess( this.deferredShadingPostprocess, {
+				viewMatrix: cameraComponent.viewMatrix,
+				projectionMatrix: cameraComponent.projectionMatrix,
+				cameraMatrixWorld: cameraEntity.matrixWorld,
+			}, );
 
-			this.renderCamera( "forward", cameraEntity, cameraComponent, stack.forward );
+			this.renderCamera( "forward", cameraComponent.renderTarget.outBuffer, cameraMatirx, stack.forward );
 
 			const postProcess = cameraEntity.getComponent<PostProcess>( 'postprocess' );
 
@@ -145,12 +194,7 @@ export class Renderer {
 
 	}
 
-	private renderCamera( renderType: MaterialRenderType, cameraEntity: Entity, cameraComponent: Camera, entities: Entity[] ) {
-
-		let renderTarget = null;
-
-		if ( renderType == 'deferred' ) renderTarget = cameraComponent.renderTarget.gBuffer;
-		else if ( renderType == 'forward' ) renderTarget = cameraComponent.renderTarget.outBuffer;
+	private renderCamera( renderType: MaterialRenderType, renderTarget: GLP.GLPowerFrameBuffer | null, cameraMatirx: CameraMatrix, entities: Entity[], clear?:boolean ) {
 
 		if ( renderTarget ) {
 
@@ -167,7 +211,7 @@ export class Renderer {
 
 		// clear
 
-		if ( renderType == 'deferred' ) {
+		if ( clear ) {
 
 			gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
 			gl.clearDepth( 1.0 );
@@ -183,12 +227,7 @@ export class Renderer {
 			const material = entity.getComponent<Material>( "material" )!;
 			const geometry = entity.getComponent<Geometry>( "geometry" )!;
 
-			this.draw( entity.uuid.toString(), renderType, geometry, material, {
-				modelMatrixWorld: entity.matrixWorld,
-				cameraMatrixWorld: cameraEntity.matrixWorld,
-				viewMatrix: cameraComponent.viewMatrix,
-				projectionMatrix: cameraComponent.projectionMatrix,
-			} );
+			this.draw( entity.uuid.toString(), renderType, geometry, material, { ...cameraMatirx, modelMatrixWorld: entity.matrixWorld } );
 
 		}
 
@@ -199,10 +238,28 @@ export class Renderer {
 		const lightComponent = lightEntity.getComponent<Light>( 'light' )!;
 		const type = lightComponent.type;
 
+		const info: LightInfo = {
+			position: new GLP.Vector( 0.0, 0.0, 0.0, 1.0 ).applyMatrix4( lightEntity.matrixWorld ),
+			direction: new GLP.Vector( 0.0, 1.0, 0.0, 0.0 ).applyMatrix4( lightEntity.matrixWorld ).normalize(),
+			color: new GLP.Vector( lightComponent.color.x, lightComponent.color.y, lightComponent.color.z ).multiply( lightComponent.intensity ),
+			component: lightComponent,
+		};
+
+		if ( type == 'directional' ) {
+
+			this.lights.directionalLight.push( info );
+
+		} else if ( type == 'spot' ) {
+
+			this.lights.spotLight.push( info );
+
+		}
+
+		return lightComponent.renderTarget != null;
 
 	}
 
-	private renderPostProcess( postprocess: PostProcess ) {
+	private renderPostProcess( postprocess: PostProcess, matrix?: CameraMatrix ) {
 
 		// render
 
@@ -244,13 +301,13 @@ export class Renderer {
 
 			}
 
-			this.draw( "id", "postprocess", this.quad, pass );
+			this.draw( "id", "postprocess", this.quad, pass, matrix );
 
 		}
 
 	}
 
-	private draw( drawId: string, renderType: MaterialRenderType, geometry: Geometry, material: Material, matrix?: { modelMatrixWorld?: GLP.Matrix, viewMatrix?: GLP.Matrix, projectionMatrix?: GLP.Matrix, cameraMatrixWorld?: GLP.Matrix } ) {
+	private draw( drawId: string, renderType: MaterialRenderType, geometry: Geometry, material: Material, matrix?: RenderMatrix ) {
 
 		this.textureUnit = 0;
 
@@ -266,8 +323,8 @@ export class Renderer {
 		else if ( renderType == 'forward' || renderType == 'envMap' ) defines.IS_FORWARD = "";
 		else if ( renderType == 'shadowMap' ) defines.IS_DEPTH = "";
 
-		const vert = shaderParse( material.vert, defines );
-		const frag = shaderParse( material.frag, defines );
+		const vert = shaderParse( material.vert, defines, this.lights );
+		const frag = shaderParse( material.frag, defines, this.lights );
 
 		const program = this.programManager.get( vert, frag );
 
@@ -308,6 +365,65 @@ export class Renderer {
 			if ( matrix.cameraMatrixWorld ) {
 
 				program.setUniform( 'cameraMatrix', 'Matrix4fv', matrix.cameraMatrixWorld.elm );
+
+			}
+
+		}
+
+		if ( material.useLight ) {
+
+			for ( let i = 0; i < this.lights.directionalLight.length; i ++ ) {
+
+				const dLight = this.lights.directionalLight[ i ];
+
+				program.setUniform( 'directionalLight[' + i + '].direction', '3fv', dLight.direction.getElm( 'vec3' ) );
+				program.setUniform( 'directionalLight[' + i + '].color', '3fv', dLight.color.getElm( 'vec3' ) );
+
+				if ( dLight.component.renderTarget ) {
+
+					const texture = dLight.component.renderTarget.textures[ 0 ].activate( this.textureUnit ++ );
+
+					program.setUniform( 'directionalLightCamera[' + i + '].near', '1fv', [ dLight.component.near ] );
+					program.setUniform( 'directionalLightCamera[' + i + '].far', '1fv', [ dLight.component.far ] );
+					program.setUniform( 'directionalLightCamera[' + i + '].viewMatrix', 'Matrix4fv', dLight.component.viewMatrix.elm );
+					program.setUniform( 'directionalLightCamera[' + i + '].projectionMatrix', 'Matrix4fv', dLight.component.projectionMatrix.elm );
+					program.setUniform( 'directionalLightCamera[' + i + '].resolution', '2fv', texture.size.getElm( "vec2" ) );
+					program.setUniform( 'directionalLightShadowMap[' + i + ']', '1i', [ texture.unit ] );
+
+				}
+
+			}
+
+			for ( let i = 0; i < this.lights.spotLight.length; i ++ ) {
+
+				const sLight = this.lights.spotLight[ i ];
+
+				if ( matrix && matrix.viewMatrix ) {
+
+					this.tmpLightDirection.copy( sLight.direction ).applyMatrix3( matrix.viewMatrix );
+
+				}
+
+				program.setUniform( 'spotLight[' + i + '].position', '3fv', sLight.position.getElm( 'vec3' ) );
+				program.setUniform( 'spotLight[' + i + '].direction', '3fv', sLight.direction.getElm( 'vec3' ) );
+				program.setUniform( 'spotLight[' + i + '].color', '3fv', sLight.color.getElm( 'vec3' ) );
+				program.setUniform( 'spotLight[' + i + '].angle', '1fv', [ sLight.component.angle ] );
+				program.setUniform( 'spotLight[' + i + '].blend', '1fv', [ sLight.component.blend ] );
+				program.setUniform( 'spotLight[' + i + '].distance', '1fv', [ sLight.component.distance ] );
+				program.setUniform( 'spotLight[' + i + '].decay', '1fv', [ sLight.component.decay ] );
+
+				if ( sLight.component.renderTarget ) {
+
+					const texture = sLight.component.renderTarget.textures[ 0 ].activate( this.textureUnit ++ );
+
+					program.setUniform( 'spotLightCamera[' + i + '].near', '1fv', [ sLight.component.near ] );
+					program.setUniform( 'spotLightCamera[' + i + '].far', '1fv', [ sLight.component.far ] );
+					program.setUniform( 'spotLightCamera[' + i + '].viewMatrix', 'Matrix4fv', sLight.component.viewMatrix.elm );
+					program.setUniform( 'spotLightCamera[' + i + '].projectionMatrix', 'Matrix4fv', sLight.component.projectionMatrix.elm );
+					program.setUniform( 'spotLightCamera[' + i + '].resolution', '2fv', texture.size.getElm( "vec2" ) );
+					program.setUniform( 'spotLightShadowMap[' + i + ']', '1i', [ texture.unit ] );
+
+				}
 
 			}
 

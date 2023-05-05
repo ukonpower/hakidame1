@@ -43,10 +43,10 @@ export default defineConfig( {
 			} ),
 			enforce: 'pre'
 		},
-		{
-			...shaderminifier(),
-			enforce: 'pre'
-		},
+		// {
+		// 	...shaderminifier(),
+		// 	enforce: 'pre'
+		// },
 		visualizer( {
 			template: "treemap"
 		} ),

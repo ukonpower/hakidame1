@@ -11,6 +11,7 @@ export type ComponentResizeEvent = EntityResizeEvent & {
 
 export type BuiltInComponents =
 	'camera' |
+	'cameraShadowMap' |
 	'perspective' |
 	"orthographic" |
 	'material' |

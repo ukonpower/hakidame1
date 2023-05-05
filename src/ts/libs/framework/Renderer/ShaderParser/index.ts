@@ -12,9 +12,10 @@ import vert_out from './shaderModules/vert_out.module.glsl';
 import frag_h from './shaderModules/frag_h.module.glsl';
 import frag_in from './shaderModules/frag_in.module.glsl';
 import frag_out from './shaderModules/frag_out.module.glsl';
+import { CollectedLights } from '..';
+import { Light } from '../../Components/Light';
 
 type Defines = {[key:string]: number | string} | undefined;
-type Lights = {}
 
 export const shaderInsertDefines = ( shader: string, defines: Defines ) => {
 
@@ -88,10 +89,10 @@ export const shaderInclude = ( shader: string ) => {
 
 };
 
-const shaderInsertLights = ( shader: string, lights?: Lights ) => {
+const shaderInsertLights = ( shader: string, lights?: CollectedLights ) => {
 
-	shader = shader.replaceAll( 'NUM_LIGHT_DIR', [].length.toString() );
-	shader = shader.replaceAll( 'NUM_LIGHT_SPOT', [].length.toString() );
+	shader = shader.replaceAll( 'NUM_LIGHT_DIR', lights ? lights.directionalLight.length.toString() : "0" );
+	shader = shader.replaceAll( 'NUM_LIGHT_SPOT', lights ? lights.spotLight.length.toString() : "0" );
 
 	return shader;
 
@@ -117,15 +118,10 @@ const shaderUnrollLoop = ( shader: string ) => {
 
 };
 
-export const shaderParse = ( shader: string, defines: Defines, lights?: Lights ) => {
+export const shaderParse = ( shader: string, defines: Defines, lights?: CollectedLights ) => {
 
 	shader = shaderInclude( shader );
 	shader = shaderInsertLights( shader, lights );
-
-	if ( lights ) {
-
-
-	}
 
 	shader = shaderInsertDefines( shader, defines );
 	shader = shaderUnrollLoop( shader );

@@ -78,11 +78,11 @@ export class GLPowerFrameBuffer {
 
 	}
 
-	public setSize( size: Vector ): void
+	public setSize( size: Vector ): GLPowerFrameBuffer
 
-	public setSize( width: number, height: number ) : void
+	public setSize( width: number, height: number ) : GLPowerFrameBuffer
 
-	public setSize( width_size: number | Vector, height?: number ) {
+	public setSize( width_size: number | Vector, height?: number ): GLPowerFrameBuffer {
 
 		if ( typeof width_size == 'number' ) {
 
@@ -115,6 +115,8 @@ export class GLPowerFrameBuffer {
 			this.gl.bindRenderbuffer( this.gl.RENDERBUFFER, null );
 
 		}
+
+		return this;
 
 	}
 

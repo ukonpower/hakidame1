@@ -23,6 +23,7 @@ export class Material extends Component {
 	public vert: string;
 	public frag: string;
 	public defines: MaterialDefines;
+	public useLight: boolean;
 
 	public uniforms: GLP.Uniforms;
 
@@ -44,6 +45,7 @@ export class Material extends Component {
 		this.frag = opt.frag;
 		this.defines = opt.defines || {};
 		this.uniforms = opt.uniforms || {};
+		this.useLight = true;
 
 	}
 

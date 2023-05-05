@@ -1,19 +1,19 @@
 import * as GLP from 'glpower';
 
 import { gl, power } from "~/ts/Globals";
-import { Camera, CameraParam } from "~/ts/libs/framework/Components/Camera";
 import { PostProcess } from "~/ts/libs/framework/Components/PostProcess";
 import { PostProcessPass } from "~/ts/libs/framework/Components/PostProcessPass";
 import { Entity, EntityResizeEvent } from "~/ts/libs/framework/Entity";
 
 import compositeFrag from './shaders/composite.fs';
 import fxaaFrag from './shaders/fxaa.fs';
+import { RenderCamera, RenderCameraParam } from '~/ts/libs/framework/Components/Camera/RenderCamera';
 
 export class MainCamera extends Entity {
 
 	private uniforms: GLP.Uniforms;
 
-	constructor( param: CameraParam ) {
+	constructor( param: RenderCameraParam ) {
 
 		super();
 
@@ -21,7 +21,7 @@ export class MainCamera extends Entity {
 		const rt2 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [ power.createTexture() ] );
 		const rt3 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [ power.createTexture() ] );
 
-		const cameraComponent = this.addComponent( "camera", new Camera( param ) );
+		const cameraComponent = this.addComponent( "camera", new RenderCamera( param ) );
 
 		this.uniforms = GLP.UniformsUtils.merge( {
 			uResolution: {
