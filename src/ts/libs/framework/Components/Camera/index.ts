@@ -41,6 +41,8 @@ export class Camera extends Component {
 		this.far = param.far || 1000;
 		this.aspect = 1.0;
 
+		this.updateProjectionMatrix();
+
 	}
 
 	public updateProjectionMatrix() {
@@ -53,9 +55,6 @@ export class Camera extends Component {
 
 		this.viewMatrix.copy( event.entity.matrixWorld ).inverse();
 
-	}
-
-	protected resizeImpl( event: ComponentResizeEvent ): void {
 	}
 
 }

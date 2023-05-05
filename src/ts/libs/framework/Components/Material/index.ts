@@ -1,6 +1,8 @@
+import * as GLP from 'glpower';
+
 import { Component } from "..";
 
-export type MaterialRenderType = "depth" | "deferred" | "forward" | "envMap" | 'postprocess'
+export type MaterialRenderType = "shadowMap" | "deferred" | "forward" | "envMap" | 'postprocess'
 
 type MaterialVisiblity = {[K in MaterialRenderType]: boolean}
 type MaterialDefines = {[key: string]: any};
@@ -9,7 +11,8 @@ export type MaterialParam = {
 	type?: MaterialRenderType[],
 	frag: string,
 	vert: string,
-	defines?: MaterialDefines
+	defines?: MaterialDefines,
+	uniforms?: GLP.Uniforms,
 }
 
 export class Material extends Component {
@@ -21,6 +24,8 @@ export class Material extends Component {
 	public frag: string;
 	public defines: MaterialDefines;
 
+	public uniforms: GLP.Uniforms;
+
 	constructor( opt: MaterialParam ) {
 
 		super();
@@ -28,7 +33,7 @@ export class Material extends Component {
 		this.type = opt.type || [];
 
 		this.visibility = {
-			depth: this.type.indexOf( 'deferred' ) > - 1,
+			shadowMap: this.type.indexOf( 'shadowMap' ) > - 1,
 			deferred: this.type.indexOf( 'deferred' ) > - 1,
 			forward: this.type.indexOf( 'forward' ) > - 1,
 			envMap: this.type.indexOf( 'envMap' ) > - 1,
@@ -37,8 +42,8 @@ export class Material extends Component {
 
 		this.vert = opt.vert;
 		this.frag = opt.frag;
-
 		this.defines = opt.defines || {};
+		this.uniforms = opt.uniforms || {};
 
 	}
 

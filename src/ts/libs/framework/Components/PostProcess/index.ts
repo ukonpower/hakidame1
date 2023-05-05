@@ -1,7 +1,10 @@
+import * as GLP from 'glpower';
+
 import { Component } from '..';
 import { PostProcessPass } from '../PostProcessPass';
 
 export interface PostProcessParam {
+	input?: GLP.GLPowerTexture[],
 	passes: PostProcessPass[]
 }
 

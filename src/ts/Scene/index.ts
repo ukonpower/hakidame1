@@ -3,12 +3,14 @@ import { Entity, EntityResizeEvent } from '../libs/framework/Entity';
 import { Carpenter } from './Carpenter';
 import { Renderer } from '../libs/framework/Renderer';
 import { Material } from '../libs/framework/Components/Material';
+import { CubeGeometry } from '../libs/framework/Components/Geometry/CubeGeometry';
+import { gl, power } from '../Globals';
 
 import basicVert from './shaders/basic.vs';
 import basicFrag from './shaders/basic.fs';
-import { CubeGeometry } from '../libs/framework/Components/Geometry/CubeGeometry';
-import { Camera } from '../libs/framework/Components/Camera';
-import { gl, power } from '../Globals';
+
+import { MainCamera } from './Entities/MainCamera';
+
 
 export class Scene extends GLP.EventEmitter {
 
@@ -61,9 +63,8 @@ export class Scene extends GLP.EventEmitter {
 
 		} );
 
-		this.camera = new Entity();
-		this.camera.addComponent( "camera", new Camera( { renderTarget: { gBuffer, outBuffer, transparencyBuffer } } ) );
-		this.camera.position.set( 0, 0, 5 );
+		this.camera = new MainCamera( { renderTarget: { gBuffer, outBuffer, transparencyBuffer } } );
+		this.camera.position.set( 0, 0, 4 );
 		this.root.add( this.camera );
 
 		// carpenter
@@ -84,8 +85,8 @@ export class Scene extends GLP.EventEmitter {
 
 		this.on( "update", () => {
 
-			box.rotation.x += 0.1;
-			box.rotation.y += 0.05;
+			box.rotation.x += 0.05;
+			box.rotation.y += 0.01;
 
 		} );
 

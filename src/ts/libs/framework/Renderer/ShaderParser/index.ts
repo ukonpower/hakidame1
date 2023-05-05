@@ -88,10 +88,10 @@ export const shaderInclude = ( shader: string ) => {
 
 };
 
-const shaderInsertLights = ( shader: string, lights: Lights ) => {
+const shaderInsertLights = ( shader: string, lights?: Lights ) => {
 
-	// shader = shader.replaceAll( 'NUM_LIGHT_DIR', lights.directionalLight.length.toString() );
-	// shader = shader.replaceAll( 'NUM_LIGHT_SPOT', lights.spotLight.length.toString() );
+	shader = shader.replaceAll( 'NUM_LIGHT_DIR', [].length.toString() );
+	shader = shader.replaceAll( 'NUM_LIGHT_SPOT', [].length.toString() );
 
 	return shader;
 
@@ -120,10 +120,10 @@ const shaderUnrollLoop = ( shader: string ) => {
 export const shaderParse = ( shader: string, defines: Defines, lights?: Lights ) => {
 
 	shader = shaderInclude( shader );
+	shader = shaderInsertLights( shader, lights );
 
 	if ( lights ) {
 
-		shader = shaderInsertLights( shader, lights );
 
 	}
 

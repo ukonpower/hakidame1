@@ -1,3 +1,4 @@
+//[
 in vec2 vUv;
 in vec3 vNormal;
 in vec3 vViewNormal;
@@ -22,3 +23,4 @@ uniform mat4 projectionMatrix;
 #if defined(IS_FORWARD) || defined(IS_DEPTH)
 	layout (location = 0) out vec4 outColor;
 #endif
+//]

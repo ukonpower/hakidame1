@@ -75,6 +75,7 @@ export class Entity extends GLP.EventEmitter {
 			light: [],
 			deferred: [],
 			forward: [],
+			shadowMap: [],
 			envMap: [],
 		};
 
@@ -86,6 +87,7 @@ export class Entity extends GLP.EventEmitter {
 		if ( geometry && material ) {
 
 			if ( material.visibility.deferred ) event.renderStack.deferred.push( this );
+			if ( material.visibility.shadowMap ) event.renderStack.shadowMap.push( this );
 			if ( material.visibility.forward ) event.renderStack.forward.push( this );
 			if ( material.visibility.envMap ) event.renderStack.envMap.push( this );
 
@@ -119,7 +121,7 @@ export class Entity extends GLP.EventEmitter {
 
 		// components
 
-		const childEvent = event as ComponentUpdateEvent;
+		const childEvent = { ...event } as ComponentUpdateEvent;
 		childEvent.entity = this;
 		childEvent.matrix = this.matrixWorld;
 
@@ -128,6 +130,8 @@ export class Entity extends GLP.EventEmitter {
 			c.update( childEvent );
 
 		} );
+
+		this.updateImpl( event );
 
 		this.emit( "update", [ event ] );
 
@@ -141,6 +145,9 @@ export class Entity extends GLP.EventEmitter {
 
 		return event.renderStack;
 
+	}
+
+	protected updateImpl( event:EntityUpdateEvent ) {
 	}
 
 	/*-------------------------------
@@ -158,6 +165,8 @@ export class Entity extends GLP.EventEmitter {
 
 		} );
 
+		this.resizeImpl( event );
+
 		this.emit( "resize", [ event ] );
 
 		for ( let i = 0; i < this.children.length; i ++ ) {
@@ -166,6 +175,9 @@ export class Entity extends GLP.EventEmitter {
 
 		}
 
+	}
+
+	protected resizeImpl( event:EntityResizeEvent ) {
 	}
 
 	/*-------------------------------

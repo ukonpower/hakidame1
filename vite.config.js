@@ -1,6 +1,7 @@
 import path from 'path';
 import { defineConfig } from 'vite';
 import glslify from 'rollup-plugin-glslify';
+import shaderminifier from './plugins/shader-minifier-loader';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 const basePath = '/1';
@@ -40,6 +41,10 @@ export default defineConfig( {
 				],
 				compress: false,
 			} ),
+			enforce: 'pre'
+		},
+		{
+			...shaderminifier(),
 			enforce: 'pre'
 		},
 		visualizer( {

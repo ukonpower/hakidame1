@@ -1,4 +1,4 @@
-
+//[
 #if defined(IS_DEPTH) || defined(IS_DEFERRED)
 	vec4 mv = viewMatrix * vec4(outPos, 1.0);
 #endif
@@ -20,3 +20,4 @@
 #ifdef IS_FORWARD
 	outColor = outColor;
 #endif
+//]

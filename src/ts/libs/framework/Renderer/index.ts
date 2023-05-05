@@ -13,13 +13,23 @@ import { PostProcess } from '../Components/PostProcess';
 import { PostProcessPass } from '../Components/PostProcessPass';
 
 import deferredShadingFrag from './shaders/deferredShading.fs';
+import { Light } from '../Components/Light';
 
 export type RenderStack = {
 	light: Entity[],
 	camera: Entity[],
 	envMap: Entity[],
+	shadowMap: Entity[],
 	deferred: Entity[],
 	forward: Entity[],
+}
+
+export type Lights = {
+	needsUpdate: boolean
+	directionalLight: {direction: GLP.Vector, color: GLP.Vector}[],
+	directionalLightShadow: ( ShadowMapCamera | null )[]
+	spotLight: {position: GLP.Vector, direction: GLP.Vector, color: GLP.Vector, angle: number, blend: number, distance: number, decay: number}[],
+	spotLightShadow: ( ShadowMapCamera | null )[]
 }
 
 export class Renderer {
@@ -40,11 +50,12 @@ export class Renderer {
 
 	// deferred
 
-	private deferredRenderPipeline: PostProcess;
+	private deferredShadingPostprocess: PostProcess;
 
 	// quad
 
 	private quad: Geometry;
+
 
 	constructor() {
 
@@ -58,9 +69,8 @@ export class Renderer {
 
 		// deferred
 
-		this.deferredRenderPipeline = new PostProcess( { passes: [
+		this.deferredShadingPostprocess = new PostProcess( { passes: [
 			new PostProcessPass( {
-				input: [],
 				renderTarget: null,
 				frag: deferredShadingFrag,
 			} )
@@ -68,7 +78,7 @@ export class Renderer {
 
 		// quad
 
-		this.quad = new PlaneGeometry();
+		this.quad = new PlaneGeometry( 2.0, 2.0 );
 
 		// tmp
 
@@ -80,15 +90,26 @@ export class Renderer {
 
 	public update( stack: RenderStack ) {
 
+		// light
+
+		for ( let i = 0; i < stack.light.length; i ++ ) {
+
+			const l = stack.light[ i ];
+
+			this.collectLight( l );
+
+		}
+
+
 		// shadowmap
 
-		// for ( let i = 0; i < stack.light.length; i ++ ) {
+		for ( let i = 0; i < stack.light.length; i ++ ) {
 
-		// 	const l = stack.light[ i ];
+			const l = stack.light[ i ];
 
-		// 	this.render( "depth", );
+			this.renderCamera( "shadowMap", l, l.getComponent<Light>( 'light' )!, stack.shadowMap );
 
-		// }
+		}
 
 		// envmap
 
@@ -100,35 +121,31 @@ export class Renderer {
 
 		for ( let i = 0; i < stack.camera.length; i ++ ) {
 
-			const camera = stack.camera[ i ];
+			const cameraEntity = stack.camera[ i ];
+			const cameraComponent = cameraEntity.getComponent<Camera>( 'camera' )!;
 
-			this.renderCamera( "deferred", camera, stack.deferred );
+			this.renderCamera( "deferred", cameraEntity, cameraComponent, stack.deferred );
 
-			this.draw( "deferredShading", "postprocess", this.quad, this.deferredRenderPipeline );
+			this.deferredShadingPostprocess.passes[ 0 ].input = cameraComponent.renderTarget.gBuffer.textures;
+			this.deferredShadingPostprocess.passes[ 0 ].renderTarget = cameraComponent.renderTarget.outBuffer;
 
-			// deferred shading
+			this.renderPostProcess( this.deferredShadingPostprocess );
 
-			this.renderCamera( "forward", camera, stack.forward );
+			this.renderCamera( "forward", cameraEntity, cameraComponent, stack.forward );
+
+			const postProcess = cameraEntity.getComponent<PostProcess>( 'postprocess' );
+
+			if ( postProcess ) {
+
+				this.renderPostProcess( postProcess );
+
+			}
 
 		}
 
-		// for ( let i = 0; i < postprocess.length; i++ ) {
-
-		// postprocess
-
-		// }
-
 	}
 
-	public resize( canvasSize: GLP.Vector ) {
-
-		this.canvasSize.copy( canvasSize );
-
-	}
-
-	private renderCamera( renderType: MaterialRenderType, camera: Entity, entities: Entity[] ) {
-
-		const cameraComponent = camera.getComponent<Camera>( 'camera' )!;
+	private renderCamera( renderType: MaterialRenderType, cameraEntity: Entity, cameraComponent: Camera, entities: Entity[] ) {
 
 		let renderTarget = null;
 
@@ -150,9 +167,13 @@ export class Renderer {
 
 		// clear
 
-		gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
-		gl.clearDepth( 1.0 );
-		gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
+		if ( renderType == 'deferred' ) {
+
+			gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
+			gl.clearDepth( 1.0 );
+			gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
+
+		}
 
 		// render
 
@@ -164,7 +185,7 @@ export class Renderer {
 
 			this.draw( entity.uuid.toString(), renderType, geometry, material, {
 				modelMatrixWorld: entity.matrixWorld,
-				cameraMatrixWorld: camera.matrixWorld,
+				cameraMatrixWorld: cameraEntity.matrixWorld,
 				viewMatrix: cameraComponent.viewMatrix,
 				projectionMatrix: cameraComponent.projectionMatrix,
 			} );
@@ -173,9 +194,65 @@ export class Renderer {
 
 	}
 
+	private collectLight( lightEntity: Entity ) {
+
+		const lightComponent = lightEntity.getComponent<Light>( 'light' )!;
+		const type = lightComponent.type;
+
+
+	}
+
+	private renderPostProcess( postprocess: PostProcess ) {
+
+		// render
+
+		for ( let i = 0; i < postprocess.passes.length; i ++ ) {
+
+			const pass = postprocess.passes[ i ];
+
+			const renderTarget = pass.renderTarget;
+
+			if ( renderTarget ) {
+
+				gl.viewport( 0, 0, renderTarget.size.x, renderTarget.size.y );
+				gl.bindFramebuffer( gl.FRAMEBUFFER, renderTarget.getFrameBuffer() );
+				gl.drawBuffers( renderTarget.textureAttachmentList );
+
+			} else {
+
+				gl.viewport( 0, 0, this.canvasSize.x, this.canvasSize.y );
+				gl.bindFramebuffer( gl.FRAMEBUFFER, null );
+
+			}
+
+			// clear
+
+			gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
+			gl.clearDepth( 1.0 );
+			gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
+
+			if ( pass.input ) {
+
+				for ( let i = 0; i < pass.input.length; i ++ ) {
+
+					pass.uniforms[ 'sampler' + i ] = {
+						type: '1i',
+						value: pass.input[ i ]
+					};
+
+				}
+
+			}
+
+			this.draw( "id", "postprocess", this.quad, pass );
+
+		}
+
+	}
+
 	private draw( drawId: string, renderType: MaterialRenderType, geometry: Geometry, material: Material, matrix?: { modelMatrixWorld?: GLP.Matrix, viewMatrix?: GLP.Matrix, projectionMatrix?: GLP.Matrix, cameraMatrixWorld?: GLP.Matrix } ) {
 
-		if ( ! material.visibility[ renderType ] ) return;
+		this.textureUnit = 0;
 
 		// status
 
@@ -187,7 +264,7 @@ export class Renderer {
 
 		if ( renderType == 'deferred' ) defines.IS_DEFERRED = "";
 		else if ( renderType == 'forward' || renderType == 'envMap' ) defines.IS_FORWARD = "";
-		else if ( renderType == 'depth' ) defines.IS_DEPTH = "";
+		else if ( renderType == 'shadowMap' ) defines.IS_DEPTH = "";
 
 		const vert = shaderParse( material.vert, defines );
 		const frag = shaderParse( material.frag, defines );
@@ -233,6 +310,59 @@ export class Renderer {
 				program.setUniform( 'cameraMatrix', 'Matrix4fv', matrix.cameraMatrixWorld.elm );
 
 			}
+
+		}
+
+		const keys = Object.keys( material.uniforms );
+
+		for ( let i = 0; i < keys.length; i ++ ) {
+
+			const name = keys[ i ];
+			const uni = material.uniforms[ name ];
+			const type = uni.type;
+			const value = uni.value;
+
+			const arrayValue: ( number | boolean )[] = [];
+
+			const _ = ( v: GLP.Uniformable ) => {
+
+				if ( typeof v == 'number' || typeof v == 'boolean' ) {
+
+					arrayValue.push( v );
+
+				} else if ( 'isVector' in v ) {
+
+					arrayValue.push( ...v.getElm( ( 'vec' + type.charAt( 0 ) ) as any ) );
+
+				} else if ( 'isTexture' in v ) {
+
+					v.activate( this.textureUnit ++ );
+
+					arrayValue.push( v.unit );
+
+				} else {
+
+					arrayValue.push( ...v.elm );
+
+				}
+
+			};
+
+			if ( Array.isArray( value ) ) {
+
+				for ( let j = 0; j < value.length; j ++ ) {
+
+					_( value[ j ] );
+
+				}
+
+			} else {
+
+				_( value );
+
+			}
+
+			program.setUniform( name, type, arrayValue );
 
 		}
 
@@ -305,6 +435,12 @@ export class Renderer {
 			} );
 
 		}
+
+	}
+
+	public resize( canvasSize: GLP.Vector ) {
+
+		this.canvasSize.copy( canvasSize );
 
 	}
 
