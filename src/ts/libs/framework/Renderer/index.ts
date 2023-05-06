@@ -10,7 +10,7 @@ import { PlaneGeometry } from '../Components/Geometry/PlaneGeometry';
 import { PostProcess } from '../Components/PostProcess';
 import { PostProcessPass } from '../Components/PostProcessPass';
 import { RenderCamera } from '../Components/Camera/RenderCamera';
-import { Light } from '../Components/Light';
+import { Light, LightType } from '../Components/Light';
 
 import deferredShadingFrag from './shaders/deferredShading.fs';
 
@@ -30,10 +30,7 @@ type LightInfo = {
 	component: Light;
 }
 
-export type CollectedLights = {
-	directionalLight: LightInfo[];
-	spotLight: LightInfo[];
-}
+export type CollectedLights = {[K in LightType]: LightInfo[]}
 
 type CameraMatrix = {
 	viewMatrix?: GLP.Matrix;
@@ -82,9 +79,11 @@ export class Renderer {
 		// lights
 
 		this.lights = {
-			directionalLight: [],
-			spotLight: [],
+			directional: [],
+			spot: [],
 		};
+
+		this.lightsUpdated = false;
 
 		// deferred
 
@@ -114,9 +113,17 @@ export class Renderer {
 		// light
 
 		const shadowMapLightList: Entity[] = [];
+		const prevLightsNum: {[key:string]: number} = {};
 
-		this.lights.directionalLight.length = 0;
-		this.lights.spotLight.length = 0;
+		const lightKeys = Object.keys( this.lights );
+
+		for ( let i = 0; i < lightKeys.length; i ++ ) {
+
+			const l = lightKeys[ i ] as LightType;
+			prevLightsNum[ l ] = this.lights[ l ].length;
+			this.lights[ l ].length = 0;
+
+		}
 
 		for ( let i = 0; i < stack.light.length; i ++ ) {
 
@@ -125,6 +132,21 @@ export class Renderer {
 			if ( this.collectLight( light ) ) {
 
 				shadowMapLightList.push( light );
+
+			}
+
+		}
+
+		this.lightsUpdated = false;
+
+		for ( let i = 0; i < lightKeys.length; i ++ ) {
+
+			const l = lightKeys[ i ] as LightType;
+
+			if ( prevLightsNum[ l ] != this.lights[ l ].length ) {
+
+				this.lightsUpdated = true;
+				break;
 
 			}
 
@@ -248,11 +270,11 @@ export class Renderer {
 
 		if ( type == 'directional' ) {
 
-			this.lights.directionalLight.push( info );
+			this.lights.directional.push( info );
 
 		} else if ( type == 'spot' ) {
 
-			this.lights.spotLight.push( info );
+			this.lights.spot.push( info );
 
 		}
 
@@ -320,7 +342,7 @@ export class Renderer {
 
 		let program = material.programCache[ renderType ];
 
-		if ( ! program ) {
+		if ( ! program || this.lightsUpdated ) {
 
 			const defines = { ...material.defines };
 
@@ -396,9 +418,9 @@ export class Renderer {
 
 		if ( material.useLight && ( renderType !== 'deferred' && renderType !== 'shadowMap' ) ) {
 
-			for ( let i = 0; i < this.lights.directionalLight.length; i ++ ) {
+			for ( let i = 0; i < this.lights.directional.length; i ++ ) {
 
-				const dLight = this.lights.directionalLight[ i ];
+				const dLight = this.lights.directional[ i ];
 
 				program.setUniform( 'directionalLight[' + i + '].direction', '3fv', dLight.direction.getElm( 'vec3' ) );
 				program.setUniform( 'directionalLight[' + i + '].color', '3fv', dLight.color.getElm( 'vec3' ) );
@@ -418,9 +440,9 @@ export class Renderer {
 
 			}
 
-			for ( let i = 0; i < this.lights.spotLight.length; i ++ ) {
+			for ( let i = 0; i < this.lights.spot.length; i ++ ) {
 
-				const sLight = this.lights.spotLight[ i ];
+				const sLight = this.lights.spot[ i ];
 
 				if ( matrix && matrix.viewMatrix ) {
 
@@ -538,7 +560,7 @@ export class Renderer {
 
 			// draw
 
-			program.use( () => {
+			program.use( ( program ) => {
 
 				program.uploadUniforms();
 

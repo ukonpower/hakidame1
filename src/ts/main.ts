@@ -54,8 +54,9 @@ class App {
 
 	private resize() {
 
-		const scale = 0.5;
-		const width = 1920 * scale, height = 1080 * scale;
+		const scale = 1.0;
+		// const width = 1920 * scale, height = 1080 * scale;
+		const width = window.innerWidth, height = window.innerHeight;
 		const aspect = width / height;
 
 		const wrapperWidth = this.canvasWrap.clientWidth;

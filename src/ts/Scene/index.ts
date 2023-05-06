@@ -83,13 +83,24 @@ export class Scene extends GLP.EventEmitter {
 		} ) );
 		this.root.add( box );
 
+		const floor = new Entity();
+		floor.scale.set( 10.0, 0.1, 10.0 );
+		floor.position.set( 0, - 1.5, 0 );
+		floor.addComponent( 'geometry', new CubeGeometry() );
+		floor.addComponent( "material", new Material( {
+			type: [ "deferred" ],
+			vert: basicVert,
+			frag: basicFrag,
+		} ) );
+		this.root.add( floor );
+
 		// light
 
 		const light = new Entity();
 		light.addComponent<Light>( 'light', new Light( {
 			type: "spot",
 			useShadowMap: true,
-			angle: 100,
+			angle: 150,
 			blend: 0.5,
 		} ) );
 
