@@ -17,7 +17,7 @@ export type BuiltInComponents =
 	'material' |
 	'geometry' |
 	'light' |
-	'blidge' |
+	'blidger' |
 ( string & {} );
 
 export class Component extends GLP.EventEmitter {

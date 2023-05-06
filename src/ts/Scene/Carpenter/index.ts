@@ -1,18 +1,18 @@
 import * as GLP from 'glpower';
 import { blidge } from '~/ts/Globals';
-import { BLidgeNode } from '~/ts/libs/framework/Components/BLidgeNode';
 import { Material } from '~/ts/libs/framework/Components/Material';
 import { Entity } from '~/ts/libs/framework/Entity';
 
 import basicVert from './shaders/basic.vs';
 import basicFrag from './shaders/basic.fs';
 import { CubeGeometry } from '~/ts/libs/framework/Components/Geometry/CubeGeometry';
+import { BLidger } from '~/ts/libs/framework/Components/BLidger';
 
 export class Carpenter extends GLP.EventEmitter {
 
 	private root: Entity;
 	private camera: Entity;
-	private objects: Map<string, Entity>;
+	private entities: Map<string, Entity>;
 
 	// frame
 
@@ -25,7 +25,7 @@ export class Carpenter extends GLP.EventEmitter {
 
 		this.root = root;
 		this.camera = camera;
-		this.objects = new Map();
+		this.entities = new Map();
 
 		// state
 
@@ -36,7 +36,7 @@ export class Carpenter extends GLP.EventEmitter {
 
 		blidge.on( 'sync/scene', this.onSyncScene.bind( this ) );
 
-		blidge.on( 'sync/timeline', ( frame: GLP.BLidgeSceneFrame ) => {
+		blidge.on( 'sync/timeline', ( frame: GLP.BLidgeFrame ) => {
 		} );
 
 		if ( process.env.NODE_ENV == "development" ) {
@@ -61,14 +61,20 @@ export class Carpenter extends GLP.EventEmitter {
 
 		const timeStamp = new Date().getTime();
 
-		const _ = ( param: GLP.BLidgeNodeParam ): Entity => {
+		const _ = ( param: GLP.BLidgeNode ): Entity => {
 
-			const obj = new Entity();
+			const entity = this.entities.get( param.name ) || new Entity();
+
+			if ( entity ) {
+
+				// const blidge = entity.getComponent("blidger", )
+
+			}
 
 			if ( param.type == 'cube' ) {
 
-				obj.addComponent( 'geometry', new CubeGeometry( 2.0, 2.0, 2.0 ) );
-				obj.addComponent( "material", new Material( {
+				entity.addComponent( 'geometry', new CubeGeometry( 2.0, 2.0, 2.0 ) );
+				entity.addComponent( "material", new Material( {
 					type: [ "deferred" ],
 					vert: basicVert,
 					frag: basicFrag,
@@ -76,25 +82,27 @@ export class Carpenter extends GLP.EventEmitter {
 
 			}
 
-			obj.addComponent( "blidge", new BLidgeNode( param ) );
+			entity.addComponent( "blidger", new BLidger( param ) );
 
 			param.children.forEach( c => {
 
 				const child = _( c );
 
-				obj.add( child );
+				entity.add( child );
 
 			} );
 
-			return obj;
+			this.entities.set( entity.name, entity );
+
+			return entity;
 
 		};
 
-		const root = blidge.scene && _( blidge.scene );
+		const blidgeRoot = blidge.root && _( blidge.root );
 
-		if ( root ) {
+		if ( blidgeRoot ) {
 
-			this.root.add( root );
+			this.root.add( blidgeRoot );
 
 		}
 

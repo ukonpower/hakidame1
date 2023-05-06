@@ -3,11 +3,11 @@ import * as GLP from 'glpower';
 import { Component, ComponentUpdateEvent } from "..";
 import { Entity } from '../../Entity';
 
-export class BLidgeNode extends Component {
+export class BLidger extends Component {
 
-	private param: GLP.BLidgeNodeParam;
+	private param: GLP.BLidgeNode;
 
-	constructor( param: GLP.BLidgeNodeParam ) {
+	constructor( param: GLP.BLidgeNode ) {
 
 		super();
 

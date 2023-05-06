@@ -4,44 +4,56 @@ import { FCurve } from "../Animation/FCurve";
 import { FCurveGroup } from '../Animation/FCurveGroup';
 import { FCurveInterpolation, FCurveKeyFrame } from "../Animation/FCurveKeyFrame";
 
-// object
+export type BLidgeNodeType = 'empty' | 'cube' | 'sphere' | 'cylinder' | 'mesh' | 'camera' | 'plane' | 'light';
 
-export type BLidgeObjectMessage = {
-	n: string,
-	prnt: string,
-	chld?: BLidgeObjectMessage[],
-	anim?: BLidgeAnimation,
-	ps: IVector3,
-	rt?: IVector3,
-	sc?: IVector3,
-	mat?: {
-		n?: string,
-		uni?: BLidgeAnimation
-	}
-	t: BLidgeObjectType,
-	v: boolean,
-	prm?: BLidgeCameraParam | BLidgeMeshParam | BLidgeLightParamCommon
+// scene
+
+export type BLidgeSceneParam = {
+    animations: {[key: string]: BLidgeCurveParam[]};
+	root: BLidgeNodeParam;
+	frame: BLidgeFrame;
 }
+
+// node
 
 export type BLidgeNodeParam = {
 	name: string,
+	type: BLidgeNodeType,
+	param?: BLidgeCameraParam | BLidgeMeshParam | BLidgeLightParamCommon
 	parent: string,
-	children: BLidgeNodeParam[],
-	animation: BLidgeAnimation,
+	children?: BLidgeNodeParam[],
+	animation?: BLidgeAnimationAccessor,
+	position: IVector3,
+	rotation: IVector3,
+	scale: IVector3,
+	material?: {
+		name?: string,
+		uniforms?: BLidgeAnimationAccessor
+	},
+	visible: boolean,
+}
+
+export type BLidgeNode = {
+	name: string,
+	type: BLidgeNodeType,
+	param?: BLidgeCameraParam | BLidgeMeshParam | BLidgeLightParamCommon
+	parent: string,
+	children: BLidgeNode[],
+	animation: BLidgeAnimationAccessor,
 	position: IVector3,
 	rotation: IVector3,
 	scale: IVector3,
 	material: BLidgeMaterialParam
-	type: BLidgeObjectType,
 	visible: boolean,
-	param?: BLidgeCameraParam | BLidgeMeshParam | BLidgeLightParamCommon
 }
 
-export type BLidgeObjectType = 'empty' | 'cube' | 'sphere' | 'cylinder' | 'mesh' | 'camera' | 'plane' | 'light';
+// camera
 
 export type BLidgeCameraParam = {
 	fov: number
 }
+
+// mesh
 
 export type BLidgeMeshParam = {
 	position: number[],
@@ -50,7 +62,7 @@ export type BLidgeMeshParam = {
 	index: number[],
 }
 
-export type BLidgeLightParam = BLidgeDirectionalLightParam | BLidgeSpotLightParam;
+// light
 
 type BLidgeLightParamCommon = {
 	type: 'directional' | 'spot'
@@ -69,33 +81,27 @@ export type BLidgeSpotLightParam = {
 	blend: number,
 } & BLidgeLightParamCommon
 
+export type BLidgeLightParam = BLidgeDirectionalLightParam | BLidgeSpotLightParam;
+
 // material
 
 export type BLidgeMaterialParam = {
 	name: string,
-	uniforms: BLidgeAnimation
-}
-
-// scene
-
-export type BLidgeSceneData = {
-    animations: {[key: string]: BLidgeAnimationCurveParam[]};
-	scene: BLidgeObjectMessage;
-	frame: BLidgeSceneFrame;
+	uniforms: BLidgeAnimationAccessor
 }
 
 // animation
 
-export type BLidgeAnimation = { [key: string]: string }
+export type BLidgeAnimationAccessor = { [key: string]: string }
 
-export type BLidgeAnimationCurveAxis = 'x' | 'y' | 'z' | 'w'
+export type BLidgeCurveAxis = 'x' | 'y' | 'z' | 'w'
 
-export type BLidgeAnimationCurveParam = {
-    k: BLidgeAnimationCurveKeyFrameParam[];
-	axis: BLidgeAnimationCurveAxis
+export type BLidgeCurveParam = {
+    k: BLidgeKeyFrameParam[];
+	axis: BLidgeCurveAxis
 }
 
-export type BLidgeAnimationCurveKeyFrameParam = {
+export type BLidgeKeyFrameParam = {
     c: IVector2;
     h_l?: IVector2;
     h_r?: IVector2;
@@ -109,15 +115,17 @@ export type BLidgeMessage = BLidgeSyncSceneMessage | BLidgeSyncFrameMessage
 
 export type BLidgeSyncSceneMessage = {
 	type: "sync/scene",
-    data: BLidgeSceneData;
+    data: BLidgeSceneParam;
 }
 
 export type BLidgeSyncFrameMessage = {
 	type: "sync/timeline";
-	data: BLidgeSceneFrame;
+	data: BLidgeFrame;
 }
 
-export type BLidgeSceneFrame = {
+// frame
+
+export type BLidgeFrame = {
 	start: number;
 	end: number;
 	current: number;
@@ -135,7 +143,7 @@ export class BLidge extends EventEmitter {
 
 	// frame
 
-	public frame: BLidgeSceneFrame = {
+	public frame: BLidgeFrame = {
 		start: - 1,
 		end: - 1,
 		current: - 1,
@@ -145,15 +153,15 @@ export class BLidge extends EventEmitter {
 
 	// animation
 
-	public objects: BLidgeNodeParam[] = [];
+	public nodes: BLidgeNode[] = [];
 	public curveGroups: FCurveGroup[] = [];
-	public scene: BLidgeNodeParam | null;
+	public root: BLidgeNode | null;
 
 	constructor( url?: string ) {
 
 		super();
 
-		this.scene = null;
+		this.root = null;
 
 		if ( url ) {
 
@@ -163,6 +171,10 @@ export class BLidge extends EventEmitter {
 		}
 
 	}
+
+	/*-------------------------------
+		Connect
+	-------------------------------*/
 
 	public connect( url: string ) {
 
@@ -181,6 +193,10 @@ export class BLidge extends EventEmitter {
 		};
 
 	}
+
+	/*-------------------------------
+		Load
+	-------------------------------*/
 
 	public loadJsonScene( jsonPath: string ) {
 
@@ -205,11 +221,7 @@ export class BLidge extends EventEmitter {
 
 	}
 
-	/*-------------------------------
-		Events
-	-------------------------------*/
-
-	public loadScene( data: BLidgeSceneData ) {
+	public loadScene( data: BLidgeSceneParam ) {
 
 		// frame
 
@@ -218,7 +230,7 @@ export class BLidge extends EventEmitter {
 		this.frame.fps = data.frame.fps;
 
 		this.curveGroups.length = 0;
-		this.objects.length = 0;
+		this.nodes.length = 0;
 
 		// actions
 
@@ -253,52 +265,52 @@ export class BLidge extends EventEmitter {
 
 		}
 
-		// objects
+		// node
 
-		this.objects.length = 0;
+		this.nodes.length = 0;
 
-		const _ = ( objMsg: BLidgeObjectMessage ): BLidgeNodeParam => {
+		const _ = ( nodeParam: BLidgeNodeParam ): BLidgeNode => {
 
 			const mat = { name: '', uniforms: {} };
 
-			if ( objMsg.mat ) {
+			if ( nodeParam.material ) {
 
-				mat.name = objMsg.mat.n || '';
-				mat.uniforms = objMsg.mat.uni || {};
+				mat.name = nodeParam.material.name || '';
+				mat.uniforms = nodeParam.material.uniforms || {};
 
 			}
 
-			const obj: BLidgeNodeParam = {
-				name: objMsg.n,
-				parent: objMsg.prnt,
+			const node: BLidgeNode = {
+				name: nodeParam.name,
+				parent: nodeParam.parent,
 				children: [],
-				animation: objMsg.anim || {},
-				position: objMsg.ps || new Vector(),
-				rotation: objMsg.rt || new Vector(),
-				scale: objMsg.sc || new Vector(),
+				animation: nodeParam.animation || {},
+				position: nodeParam.position || new Vector(),
+				rotation: nodeParam.rotation || new Vector(),
+				scale: nodeParam.scale || new Vector(),
 				material: mat,
-				type: objMsg.t,
-				visible: objMsg.v,
-				param: objMsg.prm
+				type: nodeParam.type,
+				visible: nodeParam.visible,
+				param: nodeParam.param
 			};
 
-			if ( objMsg.chld ) {
+			if ( nodeParam.children ) {
 
-				objMsg.chld.forEach( item => {
+				nodeParam.children.forEach( item => {
 
-					obj.children.push( _( item ) );
+					node.children.push( _( item ) );
 
 				} );
 
 			}
 
-			this.objects.push( obj );
+			this.nodes.push( node );
 
-			return obj;
+			return node;
 
 		};
 
-		this.scene = _( data.scene );
+		this.root = _( data.root );
 
 		// dispatch event
 
@@ -306,7 +318,7 @@ export class BLidge extends EventEmitter {
 
 	}
 
-	private onSyncTimeline( data: BLidgeSceneFrame ) {
+	private onSyncTimeline( data: BLidgeFrame ) {
 
 		this.frame = data;
 
