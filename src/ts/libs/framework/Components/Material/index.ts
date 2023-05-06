@@ -4,8 +4,9 @@ import { Component } from "..";
 
 export type MaterialRenderType = "shadowMap" | "deferred" | "forward" | "envMap" | 'postprocess'
 
-type MaterialVisiblity = {[K in MaterialRenderType]: boolean}
 type MaterialDefines = {[key: string]: any};
+type MaterialVisibility = {[K in MaterialRenderType]?: boolean}
+type MaterialProgramCache = {[K in MaterialRenderType]?: GLP.GLPowerProgram}
 
 export type MaterialParam = {
 	type?: MaterialRenderType[],
@@ -18,14 +19,15 @@ export type MaterialParam = {
 export class Material extends Component {
 
 	public type: MaterialRenderType[];
-	public visibility: MaterialVisiblity;
 
 	public vert: string;
 	public frag: string;
 	public defines: MaterialDefines;
-	public useLight: boolean;
-
 	public uniforms: GLP.Uniforms;
+
+	public useLight: boolean;
+	public visibilityFlag: MaterialVisibility;
+	public programCache: MaterialProgramCache;
 
 	constructor( opt: MaterialParam ) {
 
@@ -33,7 +35,7 @@ export class Material extends Component {
 
 		this.type = opt.type || [];
 
-		this.visibility = {
+		this.visibilityFlag = {
 			shadowMap: this.type.indexOf( 'shadowMap' ) > - 1 || this.type.indexOf( 'deferred' ) > - 1,
 			deferred: this.type.indexOf( 'deferred' ) > - 1,
 			forward: this.type.indexOf( 'forward' ) > - 1,
@@ -46,6 +48,14 @@ export class Material extends Component {
 		this.defines = opt.defines || {};
 		this.uniforms = opt.uniforms || {};
 		this.useLight = true;
+
+		this.programCache = {};
+
+	}
+
+	public requestUpdate() {
+
+		this.programCache = {};
 
 	}
 

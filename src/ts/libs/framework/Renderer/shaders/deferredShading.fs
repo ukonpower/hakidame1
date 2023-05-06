@@ -115,7 +115,7 @@ void main( void ) {
 			light.direction = spotDirection;
 			light.color = sLight.color * spotAttenuation * pow( clamp( 1.0 - spotDistance / sLight.distance, 0.0, 1.0 ),  sLight.decay );
 
-			outColor += RE( geo, mat, light );// * shadow;
+			outColor += RE( geo, mat, light ) * shadow;
 
 		#pragma loop_end
 	

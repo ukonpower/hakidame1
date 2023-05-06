@@ -6,7 +6,6 @@
 #ifdef IS_DEPTH
 	float depth_z = (-mv.z - cameraNear) / (cameraFar - cameraNear);
 	outColor0 = vec4(floatToRGBA( depth_z ));
-	outColor0 += 1.0;
 #endif
 
 #ifdef IS_DEFERRED

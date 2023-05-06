@@ -86,10 +86,10 @@ export class Entity extends GLP.EventEmitter {
 
 		if ( geometry && material ) {
 
-			if ( material.visibility.deferred ) event.renderStack.deferred.push( this );
-			if ( material.visibility.shadowMap ) event.renderStack.shadowMap.push( this );
-			if ( material.visibility.forward ) event.renderStack.forward.push( this );
-			if ( material.visibility.envMap ) event.renderStack.envMap.push( this );
+			if ( material.visibilityFlag.deferred ) event.renderStack.deferred.push( this );
+			if ( material.visibilityFlag.shadowMap ) event.renderStack.shadowMap.push( this );
+			if ( material.visibilityFlag.forward ) event.renderStack.forward.push( this );
+			if ( material.visibilityFlag.envMap ) event.renderStack.envMap.push( this );
 
 		}
 

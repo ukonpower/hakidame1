@@ -6,11 +6,9 @@ import { Material, MaterialRenderType } from "../Components/Material";
 import { Entity } from "../Entity";
 import { ProgramManager } from "./ProgramManager";
 import { shaderParse } from "./ShaderParser";
-
 import { PlaneGeometry } from '../Components/Geometry/PlaneGeometry';
 import { PostProcess } from '../Components/PostProcess';
 import { PostProcessPass } from '../Components/PostProcessPass';
-
 import { RenderCamera } from '../Components/Camera/RenderCamera';
 import { Light } from '../Components/Light';
 
@@ -33,7 +31,6 @@ type LightInfo = {
 }
 
 export type CollectedLights = {
-	needsUpdate: boolean;
 	directionalLight: LightInfo[];
 	spotLight: LightInfo[];
 }
@@ -42,6 +39,8 @@ type CameraMatrix = {
 	viewMatrix?: GLP.Matrix;
 	projectionMatrix?: GLP.Matrix;
 	cameraMatrixWorld?: GLP.Matrix;
+	cameraNear?: number,
+	cameraFar?:number,
 }
 
 type RenderMatrix = CameraMatrix & { modelMatrixWorld?: GLP.Matrix }
@@ -57,6 +56,7 @@ export class Renderer {
 	// lights
 
 	private lights: CollectedLights;
+	private lightsUpdated: boolean;
 
 	// deferred
 
@@ -82,7 +82,6 @@ export class Renderer {
 		// lights
 
 		this.lights = {
-			needsUpdate: false,
 			directionalLight: [],
 			spotLight: [],
 		};
@@ -144,6 +143,8 @@ export class Renderer {
 					viewMatrix: lightComponent.viewMatrix,
 					projectionMatrix: lightComponent.projectionMatrix,
 					cameraMatrixWorld: lightEntity.matrixWorld,
+					cameraNear: lightComponent.near,
+					cameraFar: lightComponent.far,
 				}, stack.shadowMap );
 
 			}
@@ -317,16 +318,24 @@ export class Renderer {
 		gl.enable( gl.DEPTH_TEST );
 		gl.disable( gl.BLEND );
 
-		const defines = { ...material.defines };
+		let program = material.programCache[ renderType ];
 
-		if ( renderType == 'deferred' ) defines.IS_DEFERRED = "";
-		else if ( renderType == 'forward' || renderType == 'envMap' ) defines.IS_FORWARD = "";
-		else if ( renderType == 'shadowMap' ) defines.IS_DEPTH = "";
+		if ( ! program ) {
 
-		const vert = shaderParse( material.vert, defines, this.lights );
-		const frag = shaderParse( material.frag, defines, this.lights );
+			const defines = { ...material.defines };
 
-		const program = this.programManager.get( vert, frag );
+			if ( renderType == 'deferred' ) defines.IS_DEFERRED = "";
+			else if ( renderType == 'forward' || renderType == 'envMap' ) defines.IS_FORWARD = "";
+			else if ( renderType == 'shadowMap' ) defines.IS_DEPTH = "";
+
+			const vert = shaderParse( material.vert, defines, this.lights );
+			const frag = shaderParse( material.frag, defines, this.lights );
+
+			program = this.programManager.get( vert, frag );
+
+			material.programCache[ renderType ] = program;
+
+		}
 
 		if ( matrix ) {
 
@@ -342,7 +351,6 @@ export class Renderer {
 					this.tmpNormalMatrix.inverse();
 					this.tmpNormalMatrix.transpose();
 
-					program.setUniform( 'modelViewMatrix', 'Matrix4fv', this.tmpModelViewMatrix.elm );
 					program.setUniform( 'normalMatrix', 'Matrix4fv', this.tmpNormalMatrix.elm );
 
 				}
@@ -368,9 +376,25 @@ export class Renderer {
 
 			}
 
+			if ( renderType != 'deferred' ) {
+
+				if ( matrix.cameraNear ) {
+
+					program.setUniform( 'cameraNear', '1f', [ matrix.cameraNear ] );
+
+				}
+
+				if ( matrix.cameraFar ) {
+
+					program.setUniform( 'cameraFar', '1f', [ matrix.cameraFar ] );
+
+				}
+
+			}
+
 		}
 
-		if ( material.useLight ) {
+		if ( material.useLight && ( renderType !== 'deferred' && renderType !== 'shadowMap' ) ) {
 
 			for ( let i = 0; i < this.lights.directionalLight.length; i ++ ) {
 
