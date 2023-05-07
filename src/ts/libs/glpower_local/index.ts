@@ -9,8 +9,9 @@ export * from './GLPowerTexture';
 export * from './GLPowerTransformFeedback';
 
 export * from './Math/Vector';
-export * from './Math/Matrix';
+export * from './Math/Euler';
 export * from './Math/Quaternion';
+export * from './Math/Matrix';
 
 export * from './Geometries/Geometry';
 export * from './Geometries/CubeGeometry';

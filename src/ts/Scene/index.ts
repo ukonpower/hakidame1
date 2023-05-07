@@ -2,15 +2,15 @@ import * as GLP from 'glpower';
 import { Entity, EntityResizeEvent } from '../libs/framework/Entity';
 import { Carpenter } from './Carpenter';
 import { Renderer } from '../libs/framework/Renderer';
-import { Material } from '../libs/framework/Components/Material';
-import { CubeGeometry } from '../libs/framework/Components/Geometry/CubeGeometry';
 import { gl, power } from '../Globals';
+
+import { MainCamera } from './Entities/MainCamera';
+import { Material } from '../libs/framework/Components/Material';
+
 
 import basicVert from './shaders/basic.vs';
 import basicFrag from './shaders/basic.fs';
-
-import { MainCamera } from './Entities/MainCamera';
-import { Light } from '../libs/framework/Components/Light';
+import { CubeGeometry } from '../libs/framework/Components/Geometry/CubeGeometry';
 
 
 export class Scene extends GLP.EventEmitter {
@@ -72,6 +72,10 @@ export class Scene extends GLP.EventEmitter {
 
 		this.carpenter = new Carpenter( this.root, this.camera );
 
+		// renderer
+
+		this.renderer = new Renderer();
+
 		// debug scene
 
 		const box = new Entity();
@@ -81,33 +85,8 @@ export class Scene extends GLP.EventEmitter {
 			vert: basicVert,
 			frag: basicFrag,
 		} ) );
+		box.position.set( 0, 2.0, 0 );
 		this.root.add( box );
-
-		const floor = new Entity();
-		floor.scale.set( 10.0, 0.1, 10.0 );
-		floor.position.set( 0, - 1.5, 0 );
-		floor.addComponent( 'geometry', new CubeGeometry() );
-		floor.addComponent( "material", new Material( {
-			type: [ "deferred" ],
-			vert: basicVert,
-			frag: basicFrag,
-		} ) );
-		this.root.add( floor );
-
-		// light
-
-		const light = new Entity();
-		light.addComponent<Light>( 'light', new Light( {
-			type: "spot",
-			useShadowMap: true,
-			angle: 150,
-			blend: 0.5,
-		} ) );
-
-		light.position.set( 0, 5, 0 );
-
-		this.root.add( light );
-
 
 		this.on( "update", () => {
 
@@ -115,10 +94,6 @@ export class Scene extends GLP.EventEmitter {
 			box.rotation.y += 0.01;
 
 		} );
-
-		// renderer
-
-		this.renderer = new Renderer();
 
 	}
 

@@ -23,7 +23,7 @@ export class Entity extends GLP.EventEmitter {
 	public uuid: number;
 
 	public position: GLP.Vector;
-	public rotation: GLP.Vector;
+	public rotation: GLP.Euler;
 	public quaternion: GLP.Quaternion;
 	public scale: GLP.Vector;
 
@@ -46,7 +46,7 @@ export class Entity extends GLP.EventEmitter {
 		this.uuid = new Date().getTime() + Math.floor( Math.random() * 1000000 );
 
 		this.position = new GLP.Vector();
-		this.rotation = new GLP.Vector();
+		this.rotation = new GLP.Euler();
 		this.quaternion = new GLP.Quaternion( 0.0, 0.0, 0.0, 1.0 );
 		this.scale = new GLP.Vector( 1.0, 1.0, 1.0 );
 
@@ -186,19 +186,15 @@ export class Entity extends GLP.EventEmitter {
 
 	public add( entity: Entity ) {
 
-		entity.parent = this;
+		if ( entity.parent ) {
 
-		const index = this.children.findIndex( c => c.uuid == entity.uuid );
-
-		if ( index > - 1 ) {
-
-			this.children[ index ] = entity;
-
-		} else {
-
-			this.children.push( entity );
+			entity.parent.remove( entity );
 
 		}
+
+		entity.parent = this;
+
+		this.children.push( entity );
 
 	}
 

@@ -5,8 +5,13 @@ import { Entity } from '~/ts/libs/framework/Entity';
 
 import basicVert from './shaders/basic.vs';
 import basicFrag from './shaders/basic.fs';
+
 import { CubeGeometry } from '~/ts/libs/framework/Components/Geometry/CubeGeometry';
 import { BLidger } from '~/ts/libs/framework/Components/BLidger';
+import { Light } from '~/ts/libs/framework/Components/Light';
+import { RenderCamera } from '~/ts/libs/framework/Components/Camera/RenderCamera';
+
+import SceneData from './scene/scene.json';
 
 export class Carpenter extends GLP.EventEmitter {
 
@@ -48,15 +53,17 @@ export class Carpenter extends GLP.EventEmitter {
 
 			blidge.on( 'error', () => {
 
-				// blidge.loadScene( SceneData );
+				blidge.loadScene( SceneData as any );
 
 			} );
 
 		} else {
 
-			// blidge.loadScene( SceneData );
+			blidge.loadScene( SceneData as any );
 
 		}
+
+
 
 	}
 
@@ -64,15 +71,15 @@ export class Carpenter extends GLP.EventEmitter {
 
 		const timeStamp = new Date().getTime();
 
-		const _ = ( param: GLP.BLidgeNode ): Entity => {
+		const _ = ( node: GLP.BLidgeNode ): Entity => {
 
-			const entity = this.entities.get( param.name ) || new Entity();
+			const entity: Entity = node.type == 'camera' ? this.camera : ( this.entities.get( node.name ) || new Entity() );
 
 			if ( entity ) {
 
 				const blidge = entity.getComponent<BLidger>( "blidger" );
 
-				if ( blidge && param.type != blidge.param.type ) {
+				if ( blidge && node.type != blidge.param.type ) {
 
 					const geoComp = entity.removeComponent( 'geometry' );
 					geoComp && geoComp.dispose();
@@ -80,12 +87,11 @@ export class Carpenter extends GLP.EventEmitter {
 					const matComp = entity.removeComponent( 'material' );
 					matComp && matComp.dispose();
 
-
 				}
 
 			}
 
-			if ( param.type == 'cube' ) {
+			if ( node.type == 'cube' ) {
 
 				entity.addComponent( 'geometry', new CubeGeometry( 2.0, 2.0, 2.0 ) );
 				entity.addComponent( "material", new Material( {
@@ -94,11 +100,30 @@ export class Carpenter extends GLP.EventEmitter {
 					frag: basicFrag,
 				} ) );
 
+			} else if ( node.type == "light" ) {
+
+				const lightParam = node.param as GLP.BLidgeLightParam;
+
+				entity.addComponent( 'light', new Light( {
+					...lightParam,
+					color: new GLP.Vector().copy( lightParam.color ),
+					useShadowMap: true,
+				} ) );
+
+			} else if ( node.type == 'camera' ) {
+
+				const cameraParam = node.param as GLP.BLidgeCameraParam;
+
+				const renderCamera = this.camera.getComponent<RenderCamera>( "camera" )!;
+
+				renderCamera.fov = cameraParam.fov;
+				renderCamera.updateProjectionMatrix();
+
 			}
 
-			entity.addComponent( "blidger", new BLidger( param ) );
+			entity.addComponent( "blidger", new BLidger( node ) );
 
-			param.children.forEach( c => {
+			node.children.forEach( c => {
 
 				const child = _( c );
 
@@ -150,9 +175,6 @@ export class Carpenter extends GLP.EventEmitter {
 			}
 
 		} );
-
-		console.log( this.root.children );
-
 
 	}
 

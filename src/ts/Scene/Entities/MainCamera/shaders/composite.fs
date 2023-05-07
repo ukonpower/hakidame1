@@ -4,8 +4,7 @@ precision highp float;
 #include <random>
 
 uniform sampler2D sampler0;
-// uniform sampler2D uBloomTexture[4];
-uniform vec4 uPP;
+uniform sampler2D uBloomTexture[4];
 
 in vec2 vUv;
 
@@ -36,15 +35,15 @@ void main( void ) {
 
 	#pragma loop_start 8
 		d = -float( LOOP_INDEX ) / 8.0 * w;
-        col.x += texture( sampler0, (lens_distortion( cuv, d + uPP.x ) * 0.95 + 0.5) + vec2( (float( LOOP_INDEX ) / 8.0 - 0.5 ) * 0.003, 0.0 )).x;
-        col.y += texture( sampler0, lens_distortion( cuv, d * 2.0 ) * 0.95 + 0.5 ).y;
-        col.z += texture( sampler0, lens_distortion( cuv, d * 3.0 - uPP.x) * 0.95 + 0.5 ).z;
+        col.x += texture( sampler0, (lens_distortion( cuv, d ) * 0.98 + 0.5) + vec2( (float( LOOP_INDEX ) / 8.0 - 0.5 ) * 0.003, 0.0 )).x;
+        col.y += texture( sampler0, lens_distortion( cuv, d * 2.0 ) * 0.98 + 0.5 ).y;
+        col.z += texture( sampler0, lens_distortion( cuv, d * 3.0) * 0.98 + 0.5 ).z;
 	#pragma loop_end
 	col.xyz /= 8.0;
 
-	// #pragma loop_start 4
-	// 	col += texture( uBloomTexture[ LOOP_INDEX ], uv ).xyz * ( 0.3 + float(LOOP_INDEX) * 0.5 ) * 0.4;
-	// #pragma loop_end
+	#pragma loop_start 4
+		col += texture( uBloomTexture[ LOOP_INDEX ], uv ).xyz * ( 0.3 + float(LOOP_INDEX) * 0.5 ) * 0.4;
+	#pragma loop_end
 
 	col *= smoothstep( 0.9, 0.3, len );
 
