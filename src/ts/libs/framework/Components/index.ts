@@ -82,4 +82,10 @@ export class Component extends GLP.EventEmitter {
 
 	protected resizeImpl( event: ComponentResizeEvent ) {}
 
+	public dispose() {
+
+		this.emit( 'dispose' );
+
+	}
+
 }

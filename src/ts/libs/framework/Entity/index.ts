@@ -188,7 +188,17 @@ export class Entity extends GLP.EventEmitter {
 
 		entity.parent = this;
 
-		this.children.push( entity );
+		const index = this.children.findIndex( c => c.uuid == entity.uuid );
+
+		if ( index > - 1 ) {
+
+			this.children[ index ] = entity;
+
+		} else {
+
+			this.children.push( entity );
+
+		}
 
 	}
 
@@ -220,7 +230,11 @@ export class Entity extends GLP.EventEmitter {
 
 	public removeComponent( name: string ) {
 
+		const component = this.components.get( name );
+
 		this.components.delete( name );
+
+		return component;
 
 	}
 

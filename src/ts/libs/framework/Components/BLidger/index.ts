@@ -5,7 +5,7 @@ import { Entity } from '../../Entity';
 
 export class BLidger extends Component {
 
-	private param: GLP.BLidgeNode;
+	public param: GLP.BLidgeNode;
 
 	constructor( param: GLP.BLidgeNode ) {
 

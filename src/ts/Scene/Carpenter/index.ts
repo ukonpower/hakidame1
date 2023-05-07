@@ -11,6 +11,7 @@ import { BLidger } from '~/ts/libs/framework/Components/BLidger';
 export class Carpenter extends GLP.EventEmitter {
 
 	private root: Entity;
+	private blidgeRoot: Entity | null;
 	private camera: Entity;
 	private entities: Map<string, Entity>;
 
@@ -33,6 +34,8 @@ export class Carpenter extends GLP.EventEmitter {
 		this.playTime = 0;
 
 		// blidge
+
+		this.blidgeRoot = null;
 
 		blidge.on( 'sync/scene', this.onSyncScene.bind( this ) );
 
@@ -67,7 +70,18 @@ export class Carpenter extends GLP.EventEmitter {
 
 			if ( entity ) {
 
-				// const blidge = entity.getComponent("blidger", )
+				const blidge = entity.getComponent<BLidger>( "blidger" );
+
+				if ( blidge && param.type != blidge.param.type ) {
+
+					const geoComp = entity.removeComponent( 'geometry' );
+					geoComp && geoComp.dispose();
+
+					const matComp = entity.removeComponent( 'material' );
+					matComp && matComp.dispose();
+
+
+				}
 
 			}
 
@@ -94,19 +108,51 @@ export class Carpenter extends GLP.EventEmitter {
 
 			this.entities.set( entity.name, entity );
 
+			entity.userData.updateTime = timeStamp;
+
 			return entity;
 
 		};
 
-		const blidgeRoot = blidge.root && _( blidge.root );
+		const newBLidgeRoot = blidge.root && _( blidge.root );
 
-		if ( blidgeRoot ) {
+		if ( newBLidgeRoot ) {
 
-			this.root.add( blidgeRoot );
+			if ( this.blidgeRoot ) {
+
+				this.root.remove( this.blidgeRoot );
+
+			}
+
+			this.blidgeRoot = newBLidgeRoot;
+
+			this.root.add( this.blidgeRoot );
 
 		}
 
 		// remove
+
+		this.entities.forEach( item => {
+
+			if ( item.userData.updateTime != timeStamp ) {
+
+				const parent = item.parent;
+
+				if ( parent ) {
+
+					parent.remove( item );
+
+				}
+
+				item.dispose();
+				this.entities.delete( item.name );
+
+			}
+
+		} );
+
+		console.log( this.root.children );
+
 
 	}
 
