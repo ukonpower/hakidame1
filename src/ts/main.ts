@@ -56,7 +56,7 @@ class App {
 
 		const scale = 1.0;
 		// const width = 1920 * scale, height = 1080 * scale;
-		const width = window.innerWidth, height = window.innerHeight;
+		const width = window.innerWidth * scale, height = window.innerHeight * scale;
 		const aspect = width / height;
 
 		const wrapperWidth = this.canvasWrap.clientWidth;

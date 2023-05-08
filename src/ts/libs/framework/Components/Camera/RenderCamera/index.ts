@@ -2,7 +2,7 @@ import * as GLP from 'glpower';
 
 import { Camera, CameraParam } from '..';
 
-type RenderCameraTarget = {
+export type RenderCameraTarget = {
 	gBuffer: GLP.GLPowerFrameBuffer,
 	outBuffer: GLP.GLPowerFrameBuffer,
 	transparencyBuffer: GLP.GLPowerFrameBuffer,

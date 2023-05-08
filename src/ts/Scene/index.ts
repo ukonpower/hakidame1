@@ -2,7 +2,7 @@ import * as GLP from 'glpower';
 import { Entity, EntityResizeEvent } from '../libs/framework/Entity';
 import { Carpenter } from './Carpenter';
 import { Renderer } from '../libs/framework/Renderer';
-import { gl, power } from '../Globals';
+import { gl, globalUniforms, power } from '../Globals';
 
 import { MainCamera } from './Entities/MainCamera';
 import { Material } from '../libs/framework/Components/Material';
@@ -75,6 +75,7 @@ export class Scene extends GLP.EventEmitter {
 		// renderer
 
 		this.renderer = new Renderer();
+		this.root.add( this.renderer );
 
 		// debug scene
 
@@ -100,8 +101,10 @@ export class Scene extends GLP.EventEmitter {
 	public update() {
 
 		const currentTime = new Date().getTime();
-		this.deltaTime = currentTime - this.currentTime;
+		this.deltaTime = ( currentTime - this.currentTime ) / 1000;
 		this.elapsedTime += this.deltaTime;
+
+		globalUniforms.time.uTime.value = this.elapsedTime;
 
 		const renderStack = this.root.update( {
 			time: this.elapsedTime,
@@ -110,7 +113,7 @@ export class Scene extends GLP.EventEmitter {
 
 		this.emit( "update" );
 
-		this.renderer.update( renderStack );
+		this.renderer.render( renderStack );
 
 	}
 
@@ -119,8 +122,6 @@ export class Scene extends GLP.EventEmitter {
 		this.root.resize( {
 			resolution: size
 		} );
-
-		this.renderer.resize( size );
 
 	}
 

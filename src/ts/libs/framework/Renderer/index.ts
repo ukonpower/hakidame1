@@ -3,16 +3,14 @@ import * as GLP from 'glpower';
 import { gl, power } from "~/ts/Globals";
 import { Geometry } from "../Components/Geometry";
 import { Material, MaterialRenderType } from "../Components/Material";
-import { Entity } from "../Entity";
+import { Entity, EntityResizeEvent } from "../Entity";
 import { ProgramManager } from "./ProgramManager";
 import { shaderParse } from "./ShaderParser";
 import { PlaneGeometry } from '../Components/Geometry/PlaneGeometry';
 import { PostProcess } from '../Components/PostProcess';
-import { PostProcessPass } from '../Components/PostProcessPass';
 import { RenderCamera } from '../Components/Camera/RenderCamera';
 import { Light, LightType } from '../Components/Light';
-
-import deferredShadingFrag from './shaders/deferredShading.fs';
+import { DeferredPostProcess } from './DeferredPostProcess';
 
 export type RenderStack = {
 	light: Entity[];
@@ -42,7 +40,7 @@ type CameraMatrix = {
 
 type RenderMatrix = CameraMatrix & { modelMatrixWorld?: GLP.Matrix }
 
-export class Renderer {
+export class Renderer extends Entity {
 
 	private programManager: ProgramManager;
 
@@ -57,7 +55,7 @@ export class Renderer {
 
 	// deferred
 
-	private deferredShadingPostprocess: PostProcess;
+	private deferredPostProcess: DeferredPostProcess;
 
 	// quad
 
@@ -73,6 +71,8 @@ export class Renderer {
 
 	constructor() {
 
+		super();
+
 		this.programManager = new ProgramManager( power );
 		this.canvasSize = new GLP.Vector();
 
@@ -87,12 +87,8 @@ export class Renderer {
 
 		// deferred
 
-		this.deferredShadingPostprocess = new PostProcess( { passes: [
-			new PostProcessPass( {
-				renderTarget: null,
-				frag: deferredShadingFrag,
-			} )
-		] } );
+		this.deferredPostProcess = new DeferredPostProcess();
+		this.addComponent( "deferredPostProcess", this.deferredPostProcess );
 
 		// quad
 
@@ -108,7 +104,7 @@ export class Renderer {
 
 	}
 
-	public update( stack: RenderStack ) {
+	public render( stack: RenderStack ) {
 
 		// light
 
@@ -194,10 +190,9 @@ export class Renderer {
 
 			this.renderCamera( "deferred", cameraComponent.renderTarget.gBuffer, cameraMatirx, stack.deferred );
 
-			this.deferredShadingPostprocess.passes[ 0 ].input = cameraComponent.renderTarget.gBuffer.textures;
-			this.deferredShadingPostprocess.passes[ 0 ].renderTarget = cameraComponent.renderTarget.outBuffer;
+			this.deferredPostProcess.setRenderTarget( cameraComponent.renderTarget );
 
-			this.renderPostProcess( this.deferredShadingPostprocess, {
+			this.renderPostProcess( this.deferredPostProcess, {
 				viewMatrix: cameraComponent.viewMatrix,
 				projectionMatrix: cameraComponent.projectionMatrix,
 				cameraMatrixWorld: cameraEntity.matrixWorld,
@@ -216,7 +211,6 @@ export class Renderer {
 		}
 
 	}
-
 	private renderCamera( renderType: MaterialRenderType, renderTarget: GLP.GLPowerFrameBuffer | null, cameraMatirx: CameraMatrix, entities: Entity[], clear:boolean = true ) {
 
 		if ( renderTarget ) {
@@ -488,6 +482,8 @@ export class Renderer {
 
 			const _ = ( v: GLP.Uniformable ) => {
 
+				if ( v == null ) return;
+
 				if ( typeof v == 'number' || typeof v == 'boolean' ) {
 
 					arrayValue.push( v );
@@ -524,7 +520,11 @@ export class Renderer {
 
 			}
 
-			program.setUniform( name, type, arrayValue );
+			if ( arrayValue.length > 0 ) {
+
+				program.setUniform( name, type, arrayValue );
+
+			}
 
 		}
 
@@ -600,9 +600,11 @@ export class Renderer {
 
 	}
 
-	public resize( canvasSize: GLP.Vector ) {
+	public resize( e: EntityResizeEvent ) {
 
-		this.canvasSize.copy( canvasSize );
+		this.canvasSize.copy( e.resolution );
+
+		this.deferredPostProcess.resize( { resolution: e.resolution, entity: this } );
 
 	}
 

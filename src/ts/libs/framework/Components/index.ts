@@ -70,7 +70,6 @@ export class Component extends GLP.EventEmitter {
 
 	}
 
-
 	protected onSetEntity( entity: Entity ) {
 	}
 
