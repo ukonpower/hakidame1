@@ -1,6 +1,6 @@
 import * as GLP from 'glpower';
 
-import { gl, globalUniforms, power } from "~/ts/Globals";
+import { canvas, gl, globalUniforms, power } from "~/ts/Globals";
 import { PostProcess } from "~/ts/libs/framework/Components/PostProcess";
 import { PostProcessPass } from "~/ts/libs/framework/Components/PostProcessPass";
 import { Entity, EntityResizeEvent } from "~/ts/libs/framework/Entity";
@@ -10,6 +10,7 @@ import fxaaFrag from './shaders/fxaa.fs';
 import bloomBlurFrag from './shaders/bloomBlur.fs';
 import bloomBrightFrag from './shaders/bloomBright.fs';
 import compositeFrag from './shaders/composite.fs';
+import { OrbitControls } from '~/ts/libs/framework/Components/OrbitControls';
 
 export class MainCamera extends Entity {
 
@@ -18,6 +19,9 @@ export class MainCamera extends Entity {
 	constructor( param: RenderCameraParam ) {
 
 		super();
+
+		const cameraComponent = this.addComponent( "camera", new RenderCamera( param ) );
+		this.addComponent( 'orbitControls', new OrbitControls( canvas ) );
 
 		const bloomRenderCount = 4;
 
@@ -39,8 +43,6 @@ export class MainCamera extends Entity {
 			] ) );
 
 		}
-
-		const cameraComponent = this.addComponent( "camera", new RenderCamera( param ) );
 
 		// resolution
 
