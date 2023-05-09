@@ -77,25 +77,6 @@ export class Scene extends GLP.EventEmitter {
 		this.renderer = new Renderer();
 		this.root.add( this.renderer );
 
-		// debug scene
-
-		const box = new Entity();
-		box.addComponent( 'geometry', new CubeGeometry() );
-		box.addComponent( "material", new Material( {
-			type: [ "deferred" ],
-			vert: basicVert,
-			frag: basicFrag,
-		} ) );
-		box.position.set( 0, 2.0, 0 );
-		this.root.add( box );
-
-		this.on( "update", () => {
-
-			box.rotation.x += 0.05;
-			box.rotation.y += 0.01;
-
-		} );
-
 	}
 
 	public update() {

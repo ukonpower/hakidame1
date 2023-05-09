@@ -40,6 +40,12 @@ type CameraMatrix = {
 
 type RenderMatrix = CameraMatrix & { modelMatrixWorld?: GLP.Matrix }
 
+type GPUState = {
+	key: string,
+	command: number,
+	state: boolean,
+}[]
+
 export class Renderer extends Entity {
 
 	private programManager: ProgramManager;
@@ -60,6 +66,10 @@ export class Renderer extends Entity {
 	// quad
 
 	private quad: Geometry;
+
+	// gpu state
+
+	private gpuState: GPUState;
 
 	// tmp
 
@@ -93,6 +103,21 @@ export class Renderer extends Entity {
 		// quad
 
 		this.quad = new PlaneGeometry( 2.0, 2.0 );
+
+		// gpu
+
+		this.gpuState = [
+			{
+				key: "cullFace",
+				command: gl.CULL_FACE,
+				state: false
+			},
+			{
+				key: "depthTest",
+				command: gl.DEPTH_TEST,
+				state: false
+			},
+		];
 
 		// tmp
 
@@ -230,8 +255,19 @@ export class Renderer extends Entity {
 
 		if ( clear ) {
 
-			gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
-			gl.clearDepth( 1.0 );
+			if ( renderType == "shadowMap" ) {
+
+				gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
+				gl.clearDepth( 1.0 );
+
+
+			} else {
+
+				gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
+				gl.clearDepth( 1.0 );
+
+			}
+
 			gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
 
 		}
@@ -301,9 +337,27 @@ export class Renderer extends Entity {
 
 			// clear
 
-			gl.clearColor( 0.0, 0.0, 0.0, 1.0 );
-			gl.clearDepth( 1.0 );
-			gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
+			let clear = 0;
+
+			if ( pass.clearColor ) {
+
+				gl.clearColor( pass.clearColor.x, pass.clearColor.y, pass.clearColor.z, pass.clearColor.w );
+				clear |= gl.COLOR_BUFFER_BIT;
+
+			}
+
+			if ( pass.clearDepth !== null ) {
+
+				gl.clearDepth( pass.clearDepth );
+				clear |= gl.DEPTH_BUFFER_BIT;
+
+			}
+
+			if ( clear !== 0 ) {
+
+				gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
+
+			}
 
 			if ( pass.input ) {
 
@@ -330,9 +384,19 @@ export class Renderer extends Entity {
 
 		// status
 
-		gl.enable( gl.CULL_FACE );
-		gl.enable( gl.DEPTH_TEST );
-		gl.disable( gl.BLEND );
+		for ( let i = 0; i < this.gpuState.length; i ++ ) {
+
+			const item = this.gpuState[ i ];
+			const newState = ( material as any )[ item.key ];
+
+			if ( item.state != newState ) {
+
+				item.state = newState;
+				item.state ? gl.enable( item.command ) : gl.disable( item.command );
+
+			}
+
+		}
 
 		let program = material.programCache[ renderType ];
 

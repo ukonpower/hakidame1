@@ -4,8 +4,8 @@ import { Component } from '..';
 import { PostProcessPass } from '../PostProcessPass';
 
 export interface PostProcessParam {
-	input?: GLP.GLPowerTexture[],
-	passes: PostProcessPass[]
+	input?: GLP.GLPowerTexture[];
+	passes: PostProcessPass[];
 }
 
 export class PostProcess extends Component {

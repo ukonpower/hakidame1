@@ -14,6 +14,8 @@ export type MaterialParam = {
 	vert: string,
 	defines?: MaterialDefines,
 	uniforms?: GLP.Uniforms,
+	depthTest?: boolean,
+	cullFace? :boolean,
 }
 
 export class Material extends Component {
@@ -26,6 +28,9 @@ export class Material extends Component {
 	public uniforms: GLP.Uniforms;
 
 	public useLight: boolean;
+	public depthTest: boolean;
+	public cullFace: boolean;
+
 	public visibilityFlag: MaterialVisibility;
 	public programCache: MaterialProgramCache;
 
@@ -48,7 +53,8 @@ export class Material extends Component {
 		this.defines = opt.defines || {};
 		this.uniforms = opt.uniforms || {};
 		this.useLight = true;
-
+		this.depthTest = opt.depthTest !== undefined ? opt.depthTest : true;
+		this.cullFace = opt.cullFace !== undefined ? opt.cullFace : true;
 		this.programCache = {};
 
 	}
