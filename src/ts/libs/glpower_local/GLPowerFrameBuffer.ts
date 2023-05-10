@@ -11,9 +11,9 @@ export class GLPowerFrameBuffer {
 
 	private gl: WebGL2RenderingContext;
 	public frameBuffer: WebGLFramebuffer | null;
-	public depthRenderBuffer: WebGLRenderbuffer | null;
 
 	public textures: GLPowerTexture[];
+	public depthTexture: GLPowerTexture | null;
 	public textureAttachmentList: number[];
 
 	constructor( gl: WebGL2RenderingContext, opt?: GLPowerFrameBfferOpt ) {
@@ -23,29 +23,38 @@ export class GLPowerFrameBuffer {
 		this.size = new Vector( 1, 1 );
 
 		this.frameBuffer = this.gl.createFramebuffer();
-		this.depthRenderBuffer = null;
+		this.depthTexture = null;
 
 		this.textures = [];
 		this.textureAttachmentList = [];
 
 		if ( ! opt || ! opt.disableDepthBuffer ) {
 
-			this.setDepthBuffer( this.gl.createRenderbuffer() );
+			this.setDepthTexture( new GLPowerTexture( this.gl ).setting( {
+				internalFormat: this.gl.DEPTH_COMPONENT16,
+				format: this.gl.DEPTH_COMPONENT,
+				type: this.gl.UNSIGNED_SHORT,
+				magFilter: this.gl.NEAREST,
+				minFilter: this.gl.NEAREST,
+			} ) );
 
 		}
 
 	}
 
-	public setDepthBuffer( renderBuffer: WebGLRenderbuffer | null ) {
+	public setDepthTexture( depthTexture: GLPowerTexture | null ) {
 
 		// depth buffer
 
-		this.depthRenderBuffer = renderBuffer;
-		this.gl.bindRenderbuffer( this.gl.RENDERBUFFER, this.depthRenderBuffer );
-		this.gl.bindFramebuffer( this.gl.FRAMEBUFFER, this.frameBuffer );
-		this.gl.framebufferRenderbuffer( this.gl.FRAMEBUFFER, this.gl.DEPTH_ATTACHMENT, this.gl.RENDERBUFFER, this.depthRenderBuffer );
-		this.gl.bindFramebuffer( this.gl.FRAMEBUFFER, null );
-		this.gl.bindRenderbuffer( this.gl.RENDERBUFFER, null );
+		this.depthTexture = depthTexture;
+
+		if ( this.depthTexture ) {
+
+			this.gl.bindFramebuffer( this.gl.FRAMEBUFFER, this.frameBuffer );
+			this.gl.framebufferTexture2D( this.gl.FRAMEBUFFER, this.gl.DEPTH_ATTACHMENT, this.gl.TEXTURE_2D, this.depthTexture.getTexture(), 0 );
+			this.gl.bindFramebuffer( this.gl.FRAMEBUFFER, null );
+
+		}
 
 	}
 
@@ -108,11 +117,9 @@ export class GLPowerFrameBuffer {
 
 		} );
 
-		if ( this.depthRenderBuffer ) {
+		if ( this.depthTexture ) {
 
-			this.gl.bindRenderbuffer( this.gl.RENDERBUFFER, this.depthRenderBuffer );
-			this.gl.renderbufferStorage( this.gl.RENDERBUFFER, this.gl.DEPTH_COMPONENT32F, this.size.x, this.size.y );
-			this.gl.bindRenderbuffer( this.gl.RENDERBUFFER, null );
+			this.depthTexture.attach( { width: this.size.x, height: this.size.y } );
 
 		}
 
@@ -129,7 +136,6 @@ export class GLPowerFrameBuffer {
 	public dispose() {
 
 		this.gl.deleteFramebuffer( this.frameBuffer );
-		this.gl.deleteRenderbuffer( this.depthRenderBuffer );
 
 	}
 

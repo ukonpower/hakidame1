@@ -4,7 +4,10 @@ precision highp float;
 #include <random>
 
 uniform sampler2D sampler0;
+uniform sampler2D uDepthTexture;
 uniform sampler2D uBloomTexture[4];
+uniform float cameraNear;
+uniform float cameraFar;
 
 in vec2 vUv;
 
@@ -48,5 +51,10 @@ void main( void ) {
 	col *= smoothstep( 0.9, 0.3, len );
 
 	outColor = vec4( col, 1.0 );
+
+	float depth = texelFetch(uDepthTexture, ivec2(gl_FragCoord.xy), 0).r;
+	depth = (2.0 * cameraNear) / (cameraFar + cameraNear - depth * (cameraFar - cameraNear) );
+
+	// outColor = vec4( vec3( smoothstep( 0.0, 1.0, depth ) ), 1.0  );
 
 }

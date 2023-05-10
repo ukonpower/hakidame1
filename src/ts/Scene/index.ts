@@ -49,22 +49,18 @@ export class Scene extends GLP.EventEmitter {
 			power.createTexture(),
 		] );
 
-		const outBuffer = new GLP.GLPowerFrameBuffer( gl );
-		outBuffer.setDepthBuffer( gBuffer.depthRenderBuffer );
-		outBuffer.setTexture( [ power.createTexture() ] );
-
-		const transparencyBuffer = new GLP.GLPowerFrameBuffer( gl, { disableDepthBuffer: true } );
+		const outBuffer = new GLP.GLPowerFrameBuffer( gl, { disableDepthBuffer: true } );
+		outBuffer.setDepthTexture( gBuffer.depthTexture );
 		outBuffer.setTexture( [ power.createTexture() ] );
 
 		this.root.on( 'resize', ( event: EntityResizeEvent ) => {
 
 			gBuffer.setSize( event.resolution );
 			outBuffer.setSize( event.resolution );
-			transparencyBuffer.setSize( event.resolution );
 
 		} );
 
-		this.camera = new MainCamera( { renderTarget: { gBuffer, outBuffer, transparencyBuffer } } );
+		this.camera = new MainCamera( { renderTarget: { gBuffer, outBuffer } } );
 		this.camera.position.set( 0, 0, 4 );
 		this.root.add( this.camera );
 

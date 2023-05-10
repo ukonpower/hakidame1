@@ -229,7 +229,10 @@ export class Renderer extends Entity {
 
 			if ( postProcess ) {
 
-				this.renderPostProcess( postProcess );
+				this.renderPostProcess( postProcess, {
+					cameraNear: cameraComponent.near,
+					cameraFar: cameraComponent.far,
+				} );
 
 			}
 

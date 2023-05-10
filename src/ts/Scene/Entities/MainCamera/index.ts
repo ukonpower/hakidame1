@@ -156,6 +156,10 @@ export class MainCamera extends Entity {
 						uBloomTexture: {
 							value: rtBloomHorizonal.map( rt => rt.textures[ 0 ] ),
 							type: '1iv'
+						},
+						uDepthTexture: {
+							value: param.renderTarget.gBuffer.depthTexture,
+							type: '1i'
 						}
 					} ),
 					defines: {
