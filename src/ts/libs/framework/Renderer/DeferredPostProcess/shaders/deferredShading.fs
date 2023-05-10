@@ -1,6 +1,6 @@
 #include <common>
 #include <packing>
-#include <light_h>
+#include <light>
 #include <re>
 
 // uniforms
@@ -13,7 +13,7 @@ uniform sampler2D sampler3; // emission, metalic
 uniform vec3 uColor;
 uniform mat4 viewMatrix;
 uniform mat4 cameraMatrix;
-
+uniform vec3 cameraPosition;
 // varyings
 
 in vec2 vUv;
@@ -41,7 +41,7 @@ void main( void ) {
 		tex0.xyz,
 		tex1.xyz,
 		0.0,
-		normalize( vec3( cameraMatrix[3][0], cameraMatrix[3][1], cameraMatrix[3][2] ) - tex0.xyz ),
+		normalize( cameraPosition - tex0.xyz ),
 		vec3( 0.0 )
 	);
 	

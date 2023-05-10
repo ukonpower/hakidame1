@@ -5,7 +5,7 @@ import { Camera, CameraParam } from '..';
 export type RenderCameraTarget = {
 	gBuffer: GLP.GLPowerFrameBuffer,
 	outBuffer: GLP.GLPowerFrameBuffer,
-	transparencyBuffer: GLP.GLPowerFrameBuffer,
+	// transparencyBuffer: GLP.GLPowerFrameBuffer,
 }
 
 export interface RenderCameraParam extends CameraParam {

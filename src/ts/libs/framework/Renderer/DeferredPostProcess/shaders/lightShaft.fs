@@ -1,6 +1,6 @@
 #include <common>
 #include <packing>
-#include <light_h>
+#include <light>
 
 // uniforms
 
@@ -10,6 +10,7 @@ uniform sampler2D uLightShaftBackBuffer;
 uniform float uTime;
 uniform mat4 cameraMatrix;
 uniform mat4 projectionMatrixInverse;
+uniform vec3 cameraPosition;
 
 // varying
 
@@ -26,7 +27,7 @@ void main( void ) {
 
 	vec3 lightShaftSum = vec3( 0.0 );
 
-	vec3 rayPos = vec3( cameraMatrix[3][0], cameraMatrix[3][1], cameraMatrix[3][2] );
+	vec3 rayPos = cameraPosition;
 	vec3 rayDir = normalize( ( cameraMatrix * projectionMatrixInverse * vec4( vUv * 2.0 - 1.0, 1.0, 1.0 ) ).xyz );
 
 	vec3 rayEndPos = texture( sampler0, vUv ).xyz;

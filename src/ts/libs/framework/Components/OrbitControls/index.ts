@@ -6,6 +6,7 @@ export class OrbitControls extends Component {
 
 	private pointer: Pointer;
 	private offsetRot: GLP.Vector;
+	private offsetPos: GLP.Vector;
 
 	constructor( targetElm: HTMLCanvasElement ) {
 
@@ -13,6 +14,7 @@ export class OrbitControls extends Component {
 
 		this.pointer = new Pointer();
 		this.offsetRot = new GLP.Vector();
+		this.offsetPos = new GLP.Vector();
 
 		this.pointer.registerElement( targetElm );
 
@@ -48,20 +50,15 @@ export class OrbitControls extends Component {
 
 	protected updateImpl( event: ComponentUpdateEvent ): void {
 
-		const pos = new GLP.Vector().copy( event.entity.position );
-		pos.w = 1.0;
+		const entity = event.entity;
 
 		const qua = new GLP.Quaternion().copy( event.entity.quaternion );
 
-		const offsetPos = new GLP.Vector( this.offsetRot.x, - this.offsetRot.y, 0.0, 1.0 );
-		offsetPos.applyMatrix4( new GLP.Matrix().applyQuaternion( qua ) );
+		this.offsetPos.set( this.offsetRot.x, - this.offsetRot.y, 0.0, 1.0 );
+		this.offsetPos.applyMatrix4( new GLP.Matrix().applyQuaternion( qua ) );
 
-		pos.applyMatrix4( new GLP.Matrix().applyPosition( offsetPos ) );
-
-		event.entity.position.x = pos.x;
-		event.entity.position.y = pos.y;
-		event.entity.position.z = pos.z;
-
+		entity.position.set( 0, 0, 0, 1 );
+		entity.position.applyMatrix4( new GLP.Matrix().applyPosition( this.offsetPos ) );
 
 		// positionComponent.x = pos.x;
 		// positionComponent.y = pos.y;

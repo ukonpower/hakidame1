@@ -453,6 +453,7 @@ export class Renderer extends Entity {
 			if ( matrix.cameraMatrixWorld ) {
 
 				program.setUniform( 'cameraMatrix', 'Matrix4fv', matrix.cameraMatrixWorld.elm );
+				program.setUniform( 'cameraPosition', '3f', [ matrix.cameraMatrixWorld.elm[ 12 ], matrix.cameraMatrixWorld.elm[ 13 ], matrix.cameraMatrixWorld.elm[ 14 ] ] );
 
 			}
 

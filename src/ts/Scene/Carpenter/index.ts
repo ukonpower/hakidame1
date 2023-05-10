@@ -12,6 +12,7 @@ import { Light } from '~/ts/libs/framework/Components/Light';
 import { RenderCamera } from '~/ts/libs/framework/Components/Camera/RenderCamera';
 
 import SceneData from './scene/scene.json';
+import { SphereGeometry } from '~/ts/libs/framework/Components/Geometry/SphereGeometry';
 
 export class Carpenter extends GLP.EventEmitter {
 
@@ -94,6 +95,15 @@ export class Carpenter extends GLP.EventEmitter {
 			if ( node.type == 'cube' ) {
 
 				entity.addComponent( 'geometry', new CubeGeometry( 2.0, 2.0, 2.0 ) );
+				entity.addComponent( "material", new Material( {
+					type: [ "deferred" ],
+					vert: basicVert,
+					frag: basicFrag,
+				} ) );
+
+			} else if ( node.type == 'sphere' ) {
+
+				entity.addComponent( 'geometry', new SphereGeometry() );
 				entity.addComponent( "material", new Material( {
 					type: [ "deferred" ],
 					vert: basicVert,

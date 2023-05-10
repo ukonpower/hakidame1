@@ -16,11 +16,11 @@ export class DeferredPostProcess extends PostProcess {
 	private ssr: PostProcessPass;
 	private composite: PostProcessPass;
 
-	private rtLightShaft1: GLP.GLPowerFrameBuffer;
-	private rtLightShaft2: GLP.GLPowerFrameBuffer;
-	private rtSSR1: GLP.GLPowerFrameBuffer;
-	private rtSSR2: GLP.GLPowerFrameBuffer;
-	private rtShading: GLP.GLPowerFrameBuffer;
+	public rtDeferredShading: GLP.GLPowerFrameBuffer;
+	public rtLightShaft1: GLP.GLPowerFrameBuffer;
+	public rtLightShaft2: GLP.GLPowerFrameBuffer;
+	public rtSSR1: GLP.GLPowerFrameBuffer;
+	public rtSSR2: GLP.GLPowerFrameBuffer;
 
 	constructor() {
 
@@ -95,7 +95,7 @@ export class DeferredPostProcess extends PostProcess {
 		// composite
 
 		const composite = new PostProcessPass( {
-			input: rtShading.textures,
+			input: [],
 			frag: deferredCompositeFrag,
 			renderTarget: null,
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
@@ -122,7 +122,7 @@ export class DeferredPostProcess extends PostProcess {
 		this.ssr = ssr;
 		this.composite = composite;
 
-		this.rtShading = rtShading;
+		this.rtDeferredShading = rtShading;
 		this.rtLightShaft1 = rtLightShaft1;
 		this.rtLightShaft2 = rtLightShaft2;
 		this.rtSSR1 = rtSSR1;
@@ -166,7 +166,7 @@ export class DeferredPostProcess extends PostProcess {
 
 	protected resizeImpl( e: ComponentResizeEvent ): void {
 
-		this.rtShading.setSize( e.resolution );
+		this.rtDeferredShading.setSize( e.resolution );
 
 		this.rtLightShaft1.setSize( e.resolution );
 		this.rtLightShaft2.setSize( e.resolution );
@@ -181,6 +181,8 @@ export class DeferredPostProcess extends PostProcess {
 	}
 
 	public setRenderTarget( renderTarget: RenderCameraTarget ) {
+
+		this.composite.input = [ ...renderTarget.gBuffer.textures, this.rtDeferredShading.textures[ 0 ] ];
 
 		this.shading.input = renderTarget.gBuffer.textures;
 		this.lightShaft.input = renderTarget.gBuffer.textures;

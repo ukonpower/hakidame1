@@ -4,7 +4,7 @@ import sdf from './shaderModules/sdf.module.glsl';
 import random from './shaderModules/random.module.glsl';
 import rotate from './shaderModules/rotate.module.glsl';
 import noise4D from './shaderModules/noise4D.module.glsl';
-import light_h from './shaderModules/light_h.module.glsl';
+import light from './shaderModules/light.module.glsl';
 import re from './shaderModules/re.module.glsl';
 import vert_h from './shaderModules/vert_h.module.glsl';
 import vert_in from './shaderModules/vert_in.module.glsl';
@@ -13,7 +13,6 @@ import frag_h from './shaderModules/frag_h.module.glsl';
 import frag_in from './shaderModules/frag_in.module.glsl';
 import frag_out from './shaderModules/frag_out.module.glsl';
 import { CollectedLights } from '..';
-import { Light } from '../../Components/Light';
 
 type Defines = {[key:string]: number | string} | undefined;
 
@@ -62,7 +61,7 @@ export const shaderInclude = ( shader: string ) => {
 		"rotate": rotate,
 		"random": random,
 		"noise4D": noise4D,
-		"light_h": light_h,
+		"light": light,
 		"re": re,
 		"vert_h": vert_h,
 		"vert_in": vert_in,
