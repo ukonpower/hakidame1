@@ -217,11 +217,7 @@ export class Renderer extends Entity {
 
 			this.deferredPostProcess.setRenderTarget( cameraComponent.renderTarget );
 
-			this.renderPostProcess( this.deferredPostProcess, {
-				viewMatrix: cameraComponent.viewMatrix,
-				projectionMatrix: cameraComponent.projectionMatrix,
-				cameraMatrixWorld: cameraEntity.matrixWorld,
-			}, );
+			this.renderPostProcess( this.deferredPostProcess, cameraMatirx, );
 
 			this.renderCamera( "forward", cameraComponent.renderTarget.outBuffer, cameraMatirx, stack.forward, false );
 
@@ -230,6 +226,9 @@ export class Renderer extends Entity {
 			if ( postProcess ) {
 
 				this.renderPostProcess( postProcess, {
+					viewMatrix: cameraComponent.viewMatrix,
+					projectionMatrix: cameraComponent.projectionMatrix,
+					cameraMatrixWorld: cameraEntity.matrixWorld,
 					cameraNear: cameraComponent.near,
 					cameraFar: cameraComponent.far,
 				} );

@@ -41,7 +41,7 @@ export class Material extends Component {
 		this.type = opt.type || [];
 
 		this.visibilityFlag = {
-			shadowMap: this.type.indexOf( 'shadowMap' ) > - 1 || this.type.indexOf( 'deferred' ) > - 1,
+			shadowMap: this.type.indexOf( 'shadowMap' ) > - 1,
 			deferred: this.type.indexOf( 'deferred' ) > - 1,
 			forward: this.type.indexOf( 'forward' ) > - 1,
 			envMap: this.type.indexOf( 'envMap' ) > - 1,

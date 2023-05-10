@@ -5,16 +5,33 @@ import { PostProcess } from "~/ts/libs/framework/Components/PostProcess";
 import { PostProcessPass } from "~/ts/libs/framework/Components/PostProcessPass";
 import { Entity, EntityResizeEvent } from "~/ts/libs/framework/Entity";
 import { RenderCamera, RenderCameraParam } from '~/ts/libs/framework/Components/Camera/RenderCamera';
+import { OrbitControls } from '~/ts/libs/framework/Components/OrbitControls';
+import { ComponentResizeEvent, ComponentUpdateEvent } from '~/ts/libs/framework/Components';
 
 import fxaaFrag from './shaders/fxaa.fs';
 import bloomBlurFrag from './shaders/bloomBlur.fs';
 import bloomBrightFrag from './shaders/bloomBright.fs';
 import compositeFrag from './shaders/composite.fs';
-import { OrbitControls } from '~/ts/libs/framework/Components/OrbitControls';
+import lightShaftFrag from './shaders/lightShaft.fs';
+import ssrFrag from './shaders/ssr.fs';
+
 
 export class MainCamera extends Entity {
 
 	private commonUniforms: GLP.Uniforms;
+
+	private fxaa: PostProcessPass;
+	private bloomBright: PostProcessPass;
+	private bloomBlur: PostProcessPass[];
+	private composite: PostProcessPass;
+	private lightShaft: PostProcessPass;
+	private ssr: PostProcessPass;
+
+
+	public rtLightShaft1: GLP.GLPowerFrameBuffer;
+	public rtLightShaft2: GLP.GLPowerFrameBuffer;
+	public rtSSR1: GLP.GLPowerFrameBuffer;
+	public rtSSR2: GLP.GLPowerFrameBuffer;
 
 	constructor( param: RenderCameraParam ) {
 
@@ -61,112 +78,182 @@ export class MainCamera extends Entity {
 			}
 		} );
 
+		this.fxaa = new PostProcessPass( {
+			input: param.renderTarget.outBuffer.textures,
+			frag: fxaaFrag,
+			uniforms: this.commonUniforms,
+			renderTarget: rt1
+		} );
+
+		this.bloomBright = new PostProcessPass( {
+			input: rt1.textures,
+			frag: bloomBrightFrag,
+			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
+				threshold: {
+					type: '1f',
+					value: 0.5,
+				},
+			} ),
+			renderTarget: rt2
+		} );
+
+		this.bloomBlur = [];
+
+		// bloom blur
+
+		let bloomInput: GLP.GLPowerTexture[] = rt2.textures;
+
+		for ( let i = 0; i < bloomRenderCount; i ++ ) {
+
+			const rtVertical = rtBloomVertical[ i ];
+			const rtHorizonal = rtBloomHorizonal[ i ];
+
+			const resolution = new GLP.Vector();
+			resolutionBloom.push( resolution );
+
+			this.bloomBlur.push( new PostProcessPass( {
+				input: bloomInput,
+				renderTarget: rtVertical,
+				frag: bloomBlurFrag,
+				uniforms: {
+					uIsVertical: {
+						type: '1i',
+						value: true
+					},
+					uWeights: {
+						type: '1fv',
+						value: this.guassWeight( bloomRenderCount )
+					},
+					uResolution: {
+						type: '2fv',
+						value: resolution,
+					}
+				},
+				defines: {
+					GAUSS_WEIGHTS: bloomRenderCount.toString()
+				}
+			} ) );
+
+			this.bloomBlur.push( new PostProcessPass( {
+				input: rtVertical.textures,
+				renderTarget: rtHorizonal,
+				frag: bloomBlurFrag,
+				uniforms: {
+					uIsVertical: {
+						type: '1i',
+						value: false
+					},
+					uWeights: {
+						type: '1fv',
+						value: this.guassWeight( bloomRenderCount )
+					},
+					uResolution: {
+						type: '2fv',
+						value: resolution,
+					}
+				},
+				defines: {
+					GAUSS_WEIGHTS: bloomRenderCount.toString()
+				} } ) );
+
+			bloomInput = rtHorizonal.textures;
+
+		}
+
+
+		// light shaft
+
+		this.rtLightShaft1 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
+		] );
+		this.rtLightShaft2 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
+		] );
+
+		this.lightShaft = new PostProcessPass( {
+			input: param.renderTarget.gBuffer.textures,
+			frag: lightShaftFrag,
+			renderTarget: this.rtLightShaft1,
+			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
+				uLightShaftBackBuffer: {
+					value: this.rtLightShaft2.textures[ 0 ],
+					type: '1i'
+				},
+			} ),
+		} );
+
+		// ssr
+
+		this.rtSSR1 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
+		] );
+
+		this.rtSSR2 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
+		] );
+
+		this.ssr = new PostProcessPass( {
+			input: param.renderTarget.gBuffer.textures,
+			frag: ssrFrag,
+			renderTarget: this.rtSSR1,
+			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
+				uResolution: {
+					value: resolution,
+					type: '2fv',
+				},
+				uResolutionInv: {
+					value: resolutionInv,
+					type: '2fv',
+				},
+				uSceneTex: {
+					value: rt1.textures[ 0 ],
+					type: '1i'
+				},
+				uSSRBackBuffer: {
+					value: this.rtSSR2.textures[ 0 ],
+					type: '1i'
+				},
+				uDepthTexture: {
+					value: param.renderTarget.gBuffer.depthTexture,
+					type: '1i'
+				},
+			} ),
+		} );
+
+		// composite
+
+		this.composite = new PostProcessPass( {
+			input: [ ...param.renderTarget.gBuffer.textures, rt1.textures[ 0 ] ],
+			frag: compositeFrag,
+			uniforms: GLP.UniformsUtils.merge( this.commonUniforms, {
+				uBloomTexture: {
+					value: rtBloomHorizonal.map( rt => rt.textures[ 0 ] ),
+					type: '1iv'
+				},
+				uLightShaftTexture: {
+					value: this.rtLightShaft2.textures[ 0 ],
+					type: '1i'
+				},
+				uSSRTexture: {
+					value: this.rtSSR2.textures[ 0 ],
+					type: '1i'
+				},
+			} ),
+			defines: {
+				BLOOM_COUNT: bloomRenderCount.toString()
+			},
+			renderTarget: null
+		} );
+
 		this.addComponent( "postprocess", new PostProcess( {
 			input: param.renderTarget.gBuffer.textures,
 			passes: [
-				new PostProcessPass( {
-					input: param.renderTarget.outBuffer.textures,
-					frag: fxaaFrag,
-					uniforms: this.commonUniforms,
-					renderTarget: rt1
-				} ),
-				new PostProcessPass( {
-					input: rt1.textures,
-					frag: bloomBrightFrag,
-					uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
-						threshold: {
-							type: '1f',
-							value: 0.5,
-						},
-					} ),
-					renderTarget: rt2
-				} ),
-				...( ()=>{
-
-					const res: PostProcessPass[] = [];
-
-					// bloom blur
-
-					let bloomInput: GLP.GLPowerTexture[] = rt2.textures;
-
-					for ( let i = 0; i < bloomRenderCount; i ++ ) {
-
-						const rtVertical = rtBloomVertical[ i ];
-						const rtHorizonal = rtBloomHorizonal[ i ];
-
-						const resolution = new GLP.Vector();
-						resolutionBloom.push( resolution );
-
-						res.push( new PostProcessPass( {
-							input: bloomInput,
-							renderTarget: rtVertical,
-							frag: bloomBlurFrag,
-							uniforms: {
-								uIsVertical: {
-									type: '1i',
-									value: true
-								},
-								uWeights: {
-									type: '1fv',
-									value: this.guassWeight( bloomRenderCount )
-								},
-								uResolution: {
-									type: '2fv',
-									value: resolution,
-								}
-							},
-							defines: {
-								GAUSS_WEIGHTS: bloomRenderCount.toString()
-							}
-						} ) );
-
-						res.push( new PostProcessPass( {
-							input: rtVertical.textures,
-							renderTarget: rtHorizonal,
-							frag: bloomBlurFrag,
-							uniforms: {
-								uIsVertical: {
-									type: '1i',
-									value: false
-								},
-								uWeights: {
-									type: '1fv',
-									value: this.guassWeight( bloomRenderCount )
-								},
-								uResolution: {
-									type: '2fv',
-									value: resolution,
-								}
-							},
-							defines: {
-								GAUSS_WEIGHTS: bloomRenderCount.toString()
-							} } ) );
-
-						bloomInput = rtHorizonal.textures;
-
-					}
-
-					return res;
-
-				} )(),
-				new PostProcessPass( {
-					input: rt1.textures,
-					frag: compositeFrag,
-					uniforms: GLP.UniformsUtils.merge( this.commonUniforms, {
-						uBloomTexture: {
-							value: rtBloomHorizonal.map( rt => rt.textures[ 0 ] ),
-							type: '1iv'
-						},
-						uDepthTexture: {
-							value: param.renderTarget.gBuffer.depthTexture,
-							type: '1i'
-						}
-					} ),
-					defines: {
-						BLOOM_COUNT: bloomRenderCount.toString()
-					},
-					renderTarget: null
-				} ),
+				this.fxaa,
+				this.bloomBright,
+				...this.bloomBlur,
+				this.lightShaft,
+				this.ssr,
+				this.composite,
 			] } )
 		);
 
@@ -194,6 +281,16 @@ export class MainCamera extends Entity {
 				scale *= 2.0;
 
 			}
+
+			this.rtLightShaft1.setSize( e.resolution );
+			this.rtLightShaft2.setSize( e.resolution );
+
+			const lowRes = e.resolution.clone().multiply( 0.5 );
+			lowRes.x = Math.max( lowRes.x, 1.0 );
+			lowRes.y = Math.max( lowRes.y, 1.0 );
+
+			this.rtSSR1.setSize( lowRes );
+			this.rtSSR2.setSize( lowRes );
 
 		} );
 
@@ -234,5 +331,33 @@ export class MainCamera extends Entity {
 
 	}
 
+	protected updateImpl( event: ComponentUpdateEvent ): void {
+
+		// light shaft swap
+
+		let tmp = this.rtLightShaft1;
+		this.rtLightShaft1 = this.rtLightShaft2;
+		this.rtLightShaft2 = tmp;
+
+		this.lightShaft.renderTarget = this.rtLightShaft1;
+		this.composite.uniforms.uLightShaftTexture.value = this.rtLightShaft1.textures[ 0 ];
+		this.lightShaft.uniforms.uLightShaftBackBuffer.value = this.rtLightShaft2.textures[ 0 ];
+
+		// ssr swap
+
+		tmp = this.rtSSR1;
+		this.rtSSR1 = this.rtSSR2;
+		this.rtSSR2 = tmp;
+
+		this.ssr.renderTarget = this.rtSSR1;
+		this.composite.uniforms.uSSRTexture.value = this.rtSSR1.textures[ 0 ];
+		this.ssr.uniforms.uSSRBackBuffer.value = this.rtSSR2.textures[ 0 ];
+
+	}
+
+	protected resizeImpl( e: ComponentResizeEvent ): void {
+
+
+	}
 
 }

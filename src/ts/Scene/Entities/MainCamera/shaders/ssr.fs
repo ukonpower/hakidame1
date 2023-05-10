@@ -9,13 +9,14 @@ uniform sampler2D sampler0;
 uniform sampler2D sampler1;
 uniform sampler2D uSceneTex;
 uniform sampler2D uSSRBackBuffer;
+uniform sampler2D uDepthTexture;
 
 uniform float uTime;
 uniform mat4 cameraMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
 uniform mat4 projectionMatrixInverse;
-uniform vec3 uRenderCameraPosition;
+uniform vec3 cameraPosition;
 
 // varying
 
@@ -41,8 +42,6 @@ void main( void ) {
 
 	float totalRayLength = random(vUv + fract(uTime)) * rayStepLength;
 
-	if( length( rayPos - uRenderCameraPosition ) > LENGTH + totalRayLength ) return;
-
 	rayPos += rayDir * totalRayLength;
 
 	vec3 col;
@@ -55,15 +54,11 @@ void main( void ) {
 		if( abs( depthCoord.x ) > 1.0 || abs( depthCoord.y ) > 1.0 ) break;
 
 		depthCoord.xy = depthCoord.xy * 0.5 + 0.5;
-		
-		vec4 samplerDepth = texture( sampler0, depthCoord.xy );
-
-		if( samplerDepth.x + samplerDepth.y + samplerDepth.z == 0.0 ) {
-			break;
-		};
+		float samplerDepth = texture(uDepthTexture, depthCoord.xy).x;
 
 		vec4 rayViewPos = viewMatrix * vec4( rayPos, 1.0 );
-		vec4 depthViewPos = viewMatrix * vec4( samplerDepth.xyz, 1.0 );
+		vec4 depthViewPos = projectionMatrixInverse * vec4( depthCoord.xy * 2.0 - 1.0, samplerDepth * 2.0 - 1.0, 1.0 );
+		depthViewPos.xyz /= depthViewPos.w;
 
 		if( rayViewPos.z < depthViewPos.z && rayViewPos.z >= depthViewPos.z - 1.0 ) {
 

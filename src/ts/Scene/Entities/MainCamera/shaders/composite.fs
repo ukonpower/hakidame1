@@ -1,11 +1,17 @@
-#version 300 es
-precision highp float;
-
+#include <common>
+#include <packing>
+#include <light>
+#include <re>
 #include <random>
 
 uniform sampler2D sampler0;
-uniform sampler2D uDepthTexture;
+uniform sampler2D sampler1;
+uniform sampler2D sampler4;
 uniform sampler2D uBloomTexture[4];
+uniform sampler2D uLightShaftTexture;
+uniform sampler2D uSSRTexture;
+
+uniform vec3 cameraPosition;
 uniform float cameraNear;
 uniform float cameraFar;
 
@@ -27,6 +33,11 @@ vec3 filmic(vec3 x) {
 
 void main( void ) {
 
+	vec4 gCol0 = texture( sampler0, vUv );
+	vec4 gCol1 = texture( sampler1, vUv );
+	vec3 dir = normalize( cameraPosition - gCol0.xyz );
+	float f = fresnel( dot( dir, gCol1.xyz ) );
+
 	vec3 col = vec3( 0.0, 0.0, 0.0 );
 	vec2 uv = vUv;
 
@@ -38,9 +49,9 @@ void main( void ) {
 
 	#pragma loop_start 8
 		d = -float( LOOP_INDEX ) / 8.0 * w;
-        col.x += texture( sampler0, (lens_distortion( cuv, d ) * 0.98 + 0.5) + vec2( (float( LOOP_INDEX ) / 8.0 - 0.5 ) * 0.003, 0.0 )).x;
-        col.y += texture( sampler0, lens_distortion( cuv, d * 2.0 ) * 0.98 + 0.5 ).y;
-        col.z += texture( sampler0, lens_distortion( cuv, d * 3.0) * 0.98 + 0.5 ).z;
+        col.x += texture( sampler4, (lens_distortion( cuv, d ) * 0.98 + 0.5) + vec2( (float( LOOP_INDEX ) / 8.0 - 0.5 ) * 0.003, 0.0 )).x;
+        col.y += texture( sampler4, lens_distortion( cuv, d * 2.0 ) * 0.98 + 0.5 ).y;
+        col.z += texture( sampler4, lens_distortion( cuv, d * 3.0) * 0.98 + 0.5 ).z;
 	#pragma loop_end
 	col.xyz /= 8.0;
 
@@ -51,10 +62,7 @@ void main( void ) {
 	col *= smoothstep( 0.9, 0.3, len );
 
 	outColor = vec4( col, 1.0 );
-
-	float depth = texelFetch(uDepthTexture, ivec2(gl_FragCoord.xy), 0).r;
-	depth = (2.0 * cameraNear) / (cameraFar + cameraNear - depth * (cameraFar - cameraNear) );
-
-	// outColor = vec4( vec3( smoothstep( 0.0, 1.0, depth ) ), 1.0  );
+	outColor += texture( uLightShaftTexture, vUv ) * 0.3;
+	outColor += texture( uSSRTexture, vUv ) * 0.3 * f;
 
 }

@@ -31,9 +31,9 @@ export class GLPowerFrameBuffer {
 		if ( ! opt || ! opt.disableDepthBuffer ) {
 
 			this.setDepthTexture( new GLPowerTexture( this.gl ).setting( {
-				internalFormat: this.gl.DEPTH_COMPONENT16,
+				internalFormat: this.gl.DEPTH_COMPONENT32F,
 				format: this.gl.DEPTH_COMPONENT,
-				type: this.gl.UNSIGNED_SHORT,
+				type: this.gl.FLOAT,
 				magFilter: this.gl.NEAREST,
 				minFilter: this.gl.NEAREST,
 			} ) );
