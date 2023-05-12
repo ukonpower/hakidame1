@@ -32,6 +32,16 @@ void main( void ) {
 	vec3 lightShaftSum = vec3( 0.0 );
 
 	vec3 rayPos = texture( sampler0, vUv ).xyz;
+	vec4 rayViewPos = viewMatrix * vec4(rayPos, 1.0);
+	vec4 depthRayPos = projectionMatrixInverse * vec4( vUv * 2.0 - 1.0, texture( uDepthTexture, vUv ).x * 2.0 - 1.0, 1.0 );
+	depthRayPos.xyz /=depthRayPos.w;
+
+	if( abs(rayViewPos.z - depthRayPos.z) > 0.1 ) {
+
+		outColor = vec4( 0.0, 0.0, 0.0, 1.0 );
+		return;
+		
+	}
 
 	if( rayPos.x + rayPos.y + rayPos.z == 0.0 ) return;
 
@@ -41,7 +51,6 @@ void main( void ) {
 	vec3 rayStep = rayDir * rayStepLength;
 
 	float totalRayLength = random(vUv + fract(uTime)) * rayStepLength;
-
 	rayPos += rayDir * totalRayLength;
 
 	vec3 col;

@@ -105,7 +105,7 @@ export class Carpenter extends GLP.EventEmitter {
 
 				entity.addComponent( 'geometry', new SphereGeometry() );
 				entity.addComponent( "material", new Material( {
-					type: [ "forward", "shadowMap" ],
+					type: [ "deferred", "shadowMap" ],
 					vert: basicVert,
 					frag: basicFrag,
 				} ) );

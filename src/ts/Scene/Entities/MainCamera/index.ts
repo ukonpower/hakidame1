@@ -171,12 +171,16 @@ export class MainCamera extends Entity {
 		] );
 
 		this.lightShaft = new PostProcessPass( {
-			input: param.renderTarget.gBuffer.textures,
+			input: [],
 			frag: lightShaftFrag,
 			renderTarget: this.rtLightShaft1,
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
 				uLightShaftBackBuffer: {
 					value: this.rtLightShaft2.textures[ 0 ],
+					type: '1i'
+				},
+				uDepthTexture: {
+					value: param.renderTarget.gBuffer.depthTexture,
 					type: '1i'
 				},
 			} ),
@@ -193,7 +197,7 @@ export class MainCamera extends Entity {
 		] );
 
 		this.ssr = new PostProcessPass( {
-			input: param.renderTarget.gBuffer.textures,
+			input: [ param.renderTarget.gBuffer.textures[ 0 ], param.renderTarget.gBuffer.textures[ 1 ] ],
 			frag: ssrFrag,
 			renderTarget: this.rtSSR1,
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
