@@ -365,10 +365,14 @@ export class Renderer extends Entity {
 
 				for ( let i = 0; i < pass.input.length; i ++ ) {
 
-					pass.uniforms[ 'sampler' + i ] = {
-						type: '1i',
-						value: pass.input[ i ]
-					};
+					if ( pass.input ) {
+
+						pass.uniforms[ 'sampler' + i ] = {
+							type: '1i',
+							value: pass.input[ i ]
+						};
+
+					}
 
 				}
 

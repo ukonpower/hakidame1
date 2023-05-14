@@ -3,7 +3,7 @@ import * as GLP from 'glpower';
 import { Material, MaterialParam } from '../Material';
 
 export interface PostProcessPassParam extends Omit<MaterialParam, 'vert'> {
-	input?: GLP.GLPowerTexture[],
+	input?: ( GLP.GLPowerTexture | null )[],
 	renderTarget: GLP.GLPowerFrameBuffer | null,
 	vert?: string,
 	clearColor?: GLP.Vector;
@@ -14,7 +14,7 @@ import quadVert from './shaders/quad.vs';
 
 export class PostProcessPass extends Material {
 
-	public input: GLP.GLPowerTexture[];
+	public input: ( GLP.GLPowerTexture | null )[];
 	public renderTarget: GLP.GLPowerFrameBuffer | null;
 
 	public clearColor: GLP.Vector | null;

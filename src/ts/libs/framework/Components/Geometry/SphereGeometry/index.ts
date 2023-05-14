@@ -54,10 +54,16 @@ export class SphereGeometry extends Geometry {
 					i * widthSegments + j,
 					( i + 1 ) * widthSegments + ( j + 1 ) % widthSegments,
 					( i + 1 ) * widthSegments + j,
-
 				);
 
 			}
+
+		}
+
+		for ( let i = 0; i < indexArray.length; i ++ ) {
+
+			// kuso
+			indexArray[ i ] = Math.min( posArray.length / 3 - 1, indexArray[ i ] );
 
 		}
 

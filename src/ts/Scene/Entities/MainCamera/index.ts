@@ -11,10 +11,11 @@ import { ComponentResizeEvent, ComponentUpdateEvent } from '~/ts/libs/framework/
 import fxaaFrag from './shaders/fxaa.fs';
 import bloomBlurFrag from './shaders/bloomBlur.fs';
 import bloomBrightFrag from './shaders/bloomBright.fs';
-import compositeFrag from './shaders/composite.fs';
 import lightShaftFrag from './shaders/lightShaft.fs';
 import ssrFrag from './shaders/ssr.fs';
-
+import dofCoc from './shaders/dofCoc.fs';
+import dofBokeh from './shaders/dofBokeh.fs';
+import compositeFrag from './shaders/composite.fs';
 
 export class MainCamera extends Entity {
 
@@ -23,28 +24,68 @@ export class MainCamera extends Entity {
 	private fxaa: PostProcessPass;
 	private bloomBright: PostProcessPass;
 	private bloomBlur: PostProcessPass[];
-	private composite: PostProcessPass;
-	private lightShaft: PostProcessPass;
+
 	private ssr: PostProcessPass;
-
-
 	public rtLightShaft1: GLP.GLPowerFrameBuffer;
 	public rtLightShaft2: GLP.GLPowerFrameBuffer;
+
+	private lightShaft: PostProcessPass;
 	public rtSSR1: GLP.GLPowerFrameBuffer;
 	public rtSSR2: GLP.GLPowerFrameBuffer;
+
+	public dofCoc: PostProcessPass;
+	public dofBokeh: PostProcessPass;
+	public rtDofCoc: GLP.GLPowerFrameBuffer;
+	public rtDofBokeh: GLP.GLPowerFrameBuffer;
+
+	private composite: PostProcessPass;
 
 	constructor( param: RenderCameraParam ) {
 
 		super();
 
+		// camera component
+
 		const cameraComponent = this.addComponent( "camera", new RenderCamera( param ) );
 		this.addComponent( 'orbitControls', new OrbitControls( canvas ) );
 
-		const bloomRenderCount = 4;
+		// resolution
+
+		const resolution = new GLP.Vector();
+		const resolutionInv = new GLP.Vector();
+		const resolutionBloom: GLP.Vector[] = [];
+
+		// rt
 
 		const rt1 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [ power.createTexture() ] );
 		const rt2 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [ power.createTexture() ] );
 		const rt3 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [ power.createTexture() ] );
+
+		// uniforms
+
+		this.commonUniforms = GLP.UniformsUtils.merge( {
+			uResolution: {
+				type: "2f",
+				value: resolution
+			},
+			uResolutionInv: {
+				type: "2f",
+				value: resolutionInv
+			}
+		} );
+
+		// fxaa
+
+		this.fxaa = new PostProcessPass( {
+			input: param.renderTarget.outBuffer.textures,
+			frag: fxaaFrag,
+			uniforms: this.commonUniforms,
+			renderTarget: rt1
+		} );
+
+		// bloom
+
+		const bloomRenderCount = 4;
 
 		const rtBloomVertical: GLP.GLPowerFrameBuffer[] = [];
 		const rtBloomHorizonal: GLP.GLPowerFrameBuffer[] = [];
@@ -60,30 +101,6 @@ export class MainCamera extends Entity {
 			] ) );
 
 		}
-
-		// resolution
-
-		const resolution = new GLP.Vector();
-		const resolutionInv = new GLP.Vector();
-		const resolutionBloom: GLP.Vector[] = [];
-
-		this.commonUniforms = GLP.UniformsUtils.merge( {
-			uResolution: {
-				type: "2f",
-				value: resolution
-			},
-			uResolutionInv: {
-				type: "2f",
-				value: resolutionInv
-			}
-		} );
-
-		this.fxaa = new PostProcessPass( {
-			input: param.renderTarget.outBuffer.textures,
-			frag: fxaaFrag,
-			uniforms: this.commonUniforms,
-			renderTarget: rt1
-		} );
 
 		this.bloomBright = new PostProcessPass( {
 			input: rt1.textures,
@@ -246,6 +263,28 @@ export class MainCamera extends Entity {
 			defines: {
 				BLOOM_COUNT: bloomRenderCount.toString()
 			},
+			renderTarget: rt2
+		} );
+
+		// dof
+
+		this.rtDofCoc = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
+		] );
+
+		this.rtDofBokeh = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
+		] );
+
+		this.dofCoc = new PostProcessPass( {
+			input: [ param.renderTarget.gBuffer.depthTexture ],
+			frag: dofCoc,
+			renderTarget: this.rtDofCoc
+		} );
+
+		this.dofBokeh = new PostProcessPass( {
+			input: [ this.rtDofCoc.textures[ 0 ], rt2.textures[ 0 ] ],
+			frag: dofBokeh,
 			renderTarget: null
 		} );
 
@@ -258,8 +297,11 @@ export class MainCamera extends Entity {
 				this.lightShaft,
 				this.ssr,
 				this.composite,
+				this.dofBokeh,
 			] } )
 		);
+
+		// events
 
 		this.on( "resize", ( e: EntityResizeEvent ) => {
 
