@@ -269,22 +269,37 @@ export class MainCamera extends Entity {
 		// dof
 
 		this.rtDofCoc = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
-			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR, internalFormat: gl.RGBA16F, type: gl.HALF_FLOAT, format: gl.RGBA } ),
 		] );
 
 		this.rtDofBokeh = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
 			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
 		] );
 
+		const f = 1.8;
+		const focalLength = 50.0 / 1000;
+		const focusDistance = 13;
+		const aperture = 5.0;
+		const A = focalLength / aperture;
+		const maxCoc = ( aperture * focalLength ) / ( focusDistance - focalLength );
+
 		this.dofCoc = new PostProcessPass( {
 			input: [ param.renderTarget.gBuffer.depthTexture ],
 			frag: dofCoc,
-			renderTarget: this.rtDofCoc
+			uniforms: {
+				uParams: {
+					value: new GLP.Vector( focusDistance, 100, maxCoc, 1 ),
+					type: '4f'
+				}
+			},
+			renderTarget: this.rtDofCoc,
+			// renderTarget: null
 		} );
 
 		this.dofBokeh = new PostProcessPass( {
 			input: [ this.rtDofCoc.textures[ 0 ], rt2.textures[ 0 ] ],
 			frag: dofBokeh,
+			uniforms: GLP.UniformsUtils.merge( globalUniforms.time ),
 			renderTarget: null
 		} );
 
@@ -297,6 +312,7 @@ export class MainCamera extends Entity {
 				this.lightShaft,
 				this.ssr,
 				this.composite,
+				this.dofCoc,
 				this.dofBokeh,
 			] } )
 		);
@@ -337,6 +353,9 @@ export class MainCamera extends Entity {
 
 			this.rtSSR1.setSize( lowRes );
 			this.rtSSR2.setSize( lowRes );
+
+			this.rtDofCoc.setSize( resolution );
+			this.rtDofBokeh.setSize( resolution );
 
 		} );
 
