@@ -30,15 +30,16 @@ type LightInfo = {
 
 export type CollectedLights = {[K in LightType]: LightInfo[]}
 
-type CameraMatrix = {
+type RenderOption = {
 	viewMatrix?: GLP.Matrix;
 	projectionMatrix?: GLP.Matrix;
 	cameraMatrixWorld?: GLP.Matrix;
 	cameraNear?: number,
 	cameraFar?:number,
+	uniforms?: GLP.Uniforms,
 }
 
-type RenderMatrix = CameraMatrix & { modelMatrixWorld?: GLP.Matrix }
+type DrawOption = RenderOption & { modelMatrixWorld?: GLP.Matrix }
 
 type GPUState = {
 	key: string,
@@ -182,13 +183,13 @@ export class Renderer extends Entity {
 
 			if ( lightComponent.renderTarget ) {
 
-				this.renderCamera( "shadowMap", lightComponent.renderTarget, {
+				this.renderCamera( "shadowMap", stack.shadowMap, lightComponent.renderTarget, {
 					viewMatrix: lightComponent.viewMatrix,
 					projectionMatrix: lightComponent.projectionMatrix,
 					cameraMatrixWorld: lightEntity.matrixWorld,
 					cameraNear: lightComponent.near,
 					cameraFar: lightComponent.far,
-				}, stack.shadowMap );
+				} );
 
 			}
 
@@ -207,19 +208,19 @@ export class Renderer extends Entity {
 			const cameraEntity = stack.camera[ i ];
 			const cameraComponent = cameraEntity.getComponent<RenderCamera>( 'camera' )!;
 
-			const cameraMatirx: CameraMatrix = {
+			const renderOption: RenderOption = {
 				viewMatrix: cameraComponent.viewMatrix,
 				projectionMatrix: cameraComponent.projectionMatrix,
 				cameraMatrixWorld: cameraEntity.matrixWorld
 			};
 
-			this.renderCamera( "deferred", cameraComponent.renderTarget.gBuffer, cameraMatirx, stack.deferred );
+			this.renderCamera( "deferred", stack.deferred, cameraComponent.renderTarget.gBuffer, renderOption );
 
 			this.deferredPostProcess.setRenderTarget( cameraComponent.renderTarget );
 
-			this.renderPostProcess( this.deferredPostProcess, cameraMatirx, );
+			this.renderPostProcess( this.deferredPostProcess, renderOption, );
 
-			this.renderCamera( "forward", cameraComponent.renderTarget.outBuffer, cameraMatirx, stack.forward, false );
+			this.renderCamera( "forward", stack.forward, cameraComponent.renderTarget.forwardBuffer, { ...renderOption, uniforms: { uDeferredTexture: { value: cameraComponent.renderTarget.deferredBuffer.textures[ 1 ], type: '1i' } } }, false );
 
 			const postProcess = cameraEntity.getComponent<PostProcess>( 'postprocess' );
 
@@ -238,7 +239,7 @@ export class Renderer extends Entity {
 		}
 
 	}
-	private renderCamera( renderType: MaterialRenderType, renderTarget: GLP.GLPowerFrameBuffer | null, cameraMatirx: CameraMatrix, entities: Entity[], clear:boolean = true ) {
+	private renderCamera( renderType: MaterialRenderType, entities: Entity[], renderTarget: GLP.GLPowerFrameBuffer | null, renderOption: RenderOption, clear:boolean = true ) {
 
 		if ( renderTarget ) {
 
@@ -282,7 +283,7 @@ export class Renderer extends Entity {
 			const material = entity.getComponent<Material>( "material" )!;
 			const geometry = entity.getComponent<Geometry>( "geometry" )!;
 
-			this.draw( entity.uuid.toString(), renderType, geometry, material, { ...cameraMatirx, modelMatrixWorld: entity.matrixWorld } );
+			this.draw( entity.uuid.toString(), renderType, geometry, material, { ...renderOption, modelMatrixWorld: entity.matrixWorld } );
 
 		}
 
@@ -314,7 +315,7 @@ export class Renderer extends Entity {
 
 	}
 
-	private renderPostProcess( postprocess: PostProcess, matrix?: CameraMatrix ) {
+	private renderPostProcess( postprocess: PostProcess, matrix?: RenderOption ) {
 
 		// render
 
@@ -384,7 +385,7 @@ export class Renderer extends Entity {
 
 	}
 
-	private draw( drawId: string, renderType: MaterialRenderType, geometry: Geometry, material: Material, matrix?: RenderMatrix ) {
+	private draw( drawId: string, renderType: MaterialRenderType, geometry: Geometry, material: Material, option?: DrawOption ) {
 
 		this.textureUnit = 0;
 
@@ -423,16 +424,16 @@ export class Renderer extends Entity {
 
 		}
 
-		if ( matrix ) {
+		if ( option ) {
 
-			if ( matrix.modelMatrixWorld ) {
+			if ( option.modelMatrixWorld ) {
 
-				program.setUniform( 'modelMatrix', 'Matrix4fv', matrix.modelMatrixWorld.elm );
-				program.setUniform( 'modelMatrixInverse', 'Matrix4fv', this.tmpModelMatrixInverse.copy( matrix.modelMatrixWorld ).inverse().elm );
+				program.setUniform( 'modelMatrix', 'Matrix4fv', option.modelMatrixWorld.elm );
+				program.setUniform( 'modelMatrixInverse', 'Matrix4fv', this.tmpModelMatrixInverse.copy( option.modelMatrixWorld ).inverse().elm );
 
-				if ( matrix.viewMatrix ) {
+				if ( option.viewMatrix ) {
 
-					this.tmpModelViewMatrix.copy( matrix.modelMatrixWorld ).preMultiply( matrix.viewMatrix );
+					this.tmpModelViewMatrix.copy( option.modelMatrixWorld ).preMultiply( option.viewMatrix );
 					this.tmpNormalMatrix.copy( this.tmpModelViewMatrix );
 					this.tmpNormalMatrix.inverse();
 					this.tmpNormalMatrix.transpose();
@@ -443,37 +444,37 @@ export class Renderer extends Entity {
 
 			}
 
-			if ( matrix.viewMatrix ) {
+			if ( option.viewMatrix ) {
 
-				program.setUniform( 'viewMatrix', 'Matrix4fv', matrix.viewMatrix.elm );
-
-			}
-
-			if ( matrix.projectionMatrix ) {
-
-				program.setUniform( 'projectionMatrix', 'Matrix4fv', matrix.projectionMatrix.elm );
-				program.setUniform( 'projectionMatrixInverse', 'Matrix4fv', this.tmpProjectionMatrixInverse.copy( matrix.projectionMatrix ).inverse().elm );
+				program.setUniform( 'viewMatrix', 'Matrix4fv', option.viewMatrix.elm );
 
 			}
 
-			if ( matrix.cameraMatrixWorld ) {
+			if ( option.projectionMatrix ) {
 
-				program.setUniform( 'cameraMatrix', 'Matrix4fv', matrix.cameraMatrixWorld.elm );
-				program.setUniform( 'cameraPosition', '3f', [ matrix.cameraMatrixWorld.elm[ 12 ], matrix.cameraMatrixWorld.elm[ 13 ], matrix.cameraMatrixWorld.elm[ 14 ] ] );
+				program.setUniform( 'projectionMatrix', 'Matrix4fv', option.projectionMatrix.elm );
+				program.setUniform( 'projectionMatrixInverse', 'Matrix4fv', this.tmpProjectionMatrixInverse.copy( option.projectionMatrix ).inverse().elm );
+
+			}
+
+			if ( option.cameraMatrixWorld ) {
+
+				program.setUniform( 'cameraMatrix', 'Matrix4fv', option.cameraMatrixWorld.elm );
+				program.setUniform( 'cameraPosition', '3f', [ option.cameraMatrixWorld.elm[ 12 ], option.cameraMatrixWorld.elm[ 13 ], option.cameraMatrixWorld.elm[ 14 ] ] );
 
 			}
 
 			if ( renderType != 'deferred' ) {
 
-				if ( matrix.cameraNear ) {
+				if ( option.cameraNear ) {
 
-					program.setUniform( 'cameraNear', '1f', [ matrix.cameraNear ] );
+					program.setUniform( 'cameraNear', '1f', [ option.cameraNear ] );
 
 				}
 
-				if ( matrix.cameraFar ) {
+				if ( option.cameraFar ) {
 
-					program.setUniform( 'cameraFar', '1f', [ matrix.cameraFar ] );
+					program.setUniform( 'cameraFar', '1f', [ option.cameraFar ] );
 
 				}
 
@@ -509,9 +510,9 @@ export class Renderer extends Entity {
 
 				const sLight = this.lights.spot[ i ];
 
-				if ( matrix && matrix.viewMatrix ) {
+				if ( option && option.viewMatrix ) {
 
-					this.tmpLightDirection.copy( sLight.direction ).applyMatrix3( matrix.viewMatrix );
+					this.tmpLightDirection.copy( sLight.direction ).applyMatrix3( option.viewMatrix );
 
 				}
 
@@ -540,12 +541,20 @@ export class Renderer extends Entity {
 
 		}
 
-		const keys = Object.keys( material.uniforms );
+		let uniforms = material.uniforms;
+
+		if ( option && option.uniforms ) {
+
+			uniforms = { ...uniforms, ...option.uniforms };
+
+		}
+
+		const keys = Object.keys( uniforms );
 
 		for ( let i = 0; i < keys.length; i ++ ) {
 
 			const name = keys[ i ];
-			const uni = material.uniforms[ name ];
+			const uni = uniforms[ name ];
 			const type = uni.type;
 			const value = uni.value;
 

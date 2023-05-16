@@ -4,6 +4,7 @@ in vec3 vNormal;
 in vec3 vViewNormal;
 in vec3 vPos;
 in vec3 vMVPosition;
+in vec3 vMVPPosition;
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
@@ -20,6 +21,9 @@ uniform mat4 projectionMatrix;
 	layout (location = 3) out vec4 outColor3; // emission, metalic
 #endif
 
+#ifdef IS_FORWARD
+	uniform sampler2D uDeferredTexture;
+#endif
 #if defined(IS_FORWARD) || defined(IS_DEPTH)
 	layout (location = 0) out vec4 outColor0;
 #endif

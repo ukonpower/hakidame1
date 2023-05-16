@@ -14,6 +14,10 @@ export const globalUniforms: {[key: string]: GLP.Uniforms} = {
 			value: 0,
 			type: "1f"
 		},
+		uFractTime: {
+			value: 0,
+			type: "1f"
+		},
 		uTimeSeq: {
 			value: 0,
 			type: "1f"

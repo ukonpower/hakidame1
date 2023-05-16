@@ -7,4 +7,5 @@ vViewNormal = (normalMatrix * vec4(outNormal, 0.0)).xyz;
 vNormal = (modelMatrix * vec4(outNormal, 0.0)).xyz;
 vPos = modelPosition.xyz;
 vMVPosition = mvPosition.xyz;
+vMVPPosition = gl_Position.xyz / gl_Position.w;
 //]

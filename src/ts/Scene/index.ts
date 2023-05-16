@@ -49,18 +49,22 @@ export class Scene extends GLP.EventEmitter {
 			power.createTexture(),
 		] );
 
-		const outBuffer = new GLP.GLPowerFrameBuffer( gl, { disableDepthBuffer: true } );
-		outBuffer.setDepthTexture( gBuffer.depthTexture );
-		outBuffer.setTexture( [ power.createTexture() ] );
+		const deferredBuffer = new GLP.GLPowerFrameBuffer( gl, { disableDepthBuffer: true } );
+		deferredBuffer.setTexture( [ power.createTexture(), power.createTexture() ] );
+
+		const forwardBuffer = new GLP.GLPowerFrameBuffer( gl, { disableDepthBuffer: true } );
+		forwardBuffer.setDepthTexture( gBuffer.depthTexture );
+		forwardBuffer.setTexture( [ deferredBuffer.textures[ 0 ] ] );
 
 		this.root.on( 'resize', ( event: EntityResizeEvent ) => {
 
 			gBuffer.setSize( event.resolution );
-			outBuffer.setSize( event.resolution );
+			deferredBuffer.setSize( event.resolution );
+			forwardBuffer.setSize( event.resolution );
 
 		} );
 
-		this.camera = new MainCamera( { renderTarget: { gBuffer, outBuffer } } );
+		this.camera = new MainCamera( { renderTarget: { gBuffer, deferredBuffer, forwardBuffer } } );
 		this.camera.position.set( 0, 0, 4 );
 		this.root.add( this.camera );
 
@@ -82,6 +86,7 @@ export class Scene extends GLP.EventEmitter {
 		this.elapsedTime += this.deltaTime;
 
 		globalUniforms.time.uTime.value = this.elapsedTime;
+		globalUniforms.time.uFractTime.value = this.elapsedTime % 1;
 
 		const renderStack = this.root.update( {
 			time: this.elapsedTime,

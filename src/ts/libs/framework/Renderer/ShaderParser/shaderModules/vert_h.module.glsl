@@ -7,6 +7,7 @@ out vec2 vUv;
 out vec3 vViewNormal;
 out vec3 vNormal;
 out vec3 vMVPosition;
+out vec3 vMVPPosition;
 out vec3 vPos;
 
 layout ( location = 0 ) in vec3 position;

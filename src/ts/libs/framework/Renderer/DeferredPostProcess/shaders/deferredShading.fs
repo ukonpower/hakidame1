@@ -20,7 +20,8 @@ in vec2 vUv;
 
 // out
 
-layout (location = 0) out vec4 glFragOut;
+layout (location = 0) out vec4 glFragOut0;
+layout (location = 1) out vec4 glFragOut1;
 
 void main( void ) {
 
@@ -78,6 +79,7 @@ void main( void ) {
 			light.color = dLight.color;
 
 			outColor += RE( geo, mat, light ) * shadow;
+
 		#pragma loop_end
 	
 	#endif
@@ -123,7 +125,7 @@ void main( void ) {
 	
 	outColor += mat.emission;
 
-	glFragOut = vec4( outColor, 1.0 );
+	glFragOut0 = glFragOut1 = vec4( outColor, 1.0 );
 	gl_FragDepth = 0.5;
 
 }

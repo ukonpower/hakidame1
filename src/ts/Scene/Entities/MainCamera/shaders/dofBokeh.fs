@@ -48,17 +48,17 @@ void main( void ) {
 
 	for( int i = 0; i < BOKEH_SAMPLE; i ++  ) {
 			
-		vec2 offset = poissonDisk[ i ] * 0.05; 
+		vec2 offset = poissonDisk[ i ] * 0.01 * 0.0;
 		float offCoc = texture( sampler0, vUv + offset ).x * 2.0 - 1.0;
 
-		if( coc > 0.0 && coc <= offCoc ) {
+		// if( coc > 0.0 && coc <= offCoc ) {
 			
-			bgColor.xyz += texture( sampler1, vUv + offset * coc ).xyz;
-			bgColor.w++;
+		bgColor.xyz += texture( sampler1, vUv + offset ).xyz;
+		bgColor.w++;
 
-		}
+		// }
 
-		fgColor.xyz += texture( sampler1, vUv + offset * coc ).xyz;
+		fgColor.xyz += texture( sampler1, vUv + offset ).xyz;
 		fgColor.w++;
 			
 	}

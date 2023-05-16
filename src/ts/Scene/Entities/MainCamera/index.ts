@@ -25,11 +25,11 @@ export class MainCamera extends Entity {
 	private bloomBright: PostProcessPass;
 	private bloomBlur: PostProcessPass[];
 
-	private ssr: PostProcessPass;
+	private lightShaft: PostProcessPass;
 	public rtLightShaft1: GLP.GLPowerFrameBuffer;
 	public rtLightShaft2: GLP.GLPowerFrameBuffer;
 
-	private lightShaft: PostProcessPass;
+	private ssr: PostProcessPass;
 	public rtSSR1: GLP.GLPowerFrameBuffer;
 	public rtSSR2: GLP.GLPowerFrameBuffer;
 
@@ -77,7 +77,7 @@ export class MainCamera extends Entity {
 		// fxaa
 
 		this.fxaa = new PostProcessPass( {
-			input: param.renderTarget.outBuffer.textures,
+			input: param.renderTarget.deferredBuffer.textures,
 			frag: fxaaFrag,
 			uniforms: this.commonUniforms,
 			renderTarget: rt1
