@@ -292,12 +292,12 @@ export class MainCamera extends Entity {
 		this.dofCoc = new PostProcessPass( {
 			input: [ param.renderTarget.gBuffer.depthTexture ],
 			frag: dofCoc,
-			uniforms: {
+			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
 				uParams: {
 					value: new GLP.Vector( focusDistance, 100, maxCoc, 1 ),
 					type: '4f'
 				}
-			},
+			} ),
 			renderTarget: this.rtDofCoc,
 		} );
 

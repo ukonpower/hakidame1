@@ -84,6 +84,7 @@ export class Scene extends GLP.EventEmitter {
 		const currentTime = new Date().getTime();
 		this.deltaTime = ( currentTime - this.currentTime ) / 1000;
 		this.elapsedTime += this.deltaTime;
+		this.currentTime = currentTime;
 
 		globalUniforms.time.uTime.value = this.elapsedTime;
 		globalUniforms.time.uFractTime.value = this.elapsedTime % 1;

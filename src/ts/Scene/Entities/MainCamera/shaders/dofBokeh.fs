@@ -59,7 +59,7 @@ void initPoissonDisk( float seed ) {
 	
 }
 
-const float bokehMaxSize = 0.006;
+const float bokehMaxSize = 0.008;
 
 void main( void ) {
 
@@ -78,19 +78,29 @@ void main( void ) {
 		float radius = length( offset );
 		vec4 offCoc = texture( sampler1, vUv + offset );
 
-		if( abs( offCoc.w ) * 0.03 >= radius ) {
+		float farCoc = max( 0.0, min( coc.w, offCoc.w ) );
+		float nearCoc = -offCoc.w;
 
-			bgColor.xyz += offCoc.xyz;
-			bgColor.w++;
-
-		}
+		float bgWeight = clamp( farCoc - radius * 10.0, 0.0, 1.0 );
+		bgColor += vec4( offCoc.xyz, 1.0 ) * bgWeight;
+		
+		float fgWeight = clamp( nearCoc, 0.0, 1.0 );
+		fgColor += vec4( offCoc.xyz, 1.0 ) * fgWeight;
 		
 	}
-	bgColor /= bgColor.w;
-	fgColor /= fgColor.w;
 
-	col = mix( col, bgColor.xyz, 1.0);
+	if( bgColor.w == 0.0 ) {
+
+		bgColor += vec4( coc.xyz, 1.0 );
+		
+	}
+	
+	bgColor.xyz /= bgColor.w + ( bgColor.w == 0.0 ? 1.0 : 0.0 );
+	fgColor.xyz /= fgColor.w + ( fgColor.w == 0.0 ? 1.0 : 0.0 );
+
+	col = mix( bgColor.xyz, fgColor.xyz, clamp( fgColor.w / float(BOKEH_SAMPLE) * PI , 0.0, 1.0 ) );
 
 	outColor = vec4( col, 1.0 );
+	// outColor = vec4( vec3( bgColor ), 1.0 );
 
 }
