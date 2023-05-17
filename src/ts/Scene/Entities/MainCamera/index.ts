@@ -14,6 +14,7 @@ import bloomBrightFrag from './shaders/bloomBright.fs';
 import lightShaftFrag from './shaders/lightShaft.fs';
 import ssrFrag from './shaders/ssr.fs';
 import dofCoc from './shaders/dofCoc.fs';
+import dofDownSampling from './shaders/dofDownSampling.fs';
 import dofBokeh from './shaders/dofBokeh.fs';
 import compositeFrag from './shaders/composite.fs';
 
@@ -35,8 +36,10 @@ export class MainCamera extends Entity {
 
 	public dofCoc: PostProcessPass;
 	public dofBokeh: PostProcessPass;
+	public dofDownSampling: PostProcessPass;
 	public rtDofCoc: GLP.GLPowerFrameBuffer;
 	public rtDofBokeh: GLP.GLPowerFrameBuffer;
+	public rtDofDownSampling: GLP.GLPowerFrameBuffer;
 
 	private composite: PostProcessPass;
 
@@ -276,11 +279,14 @@ export class MainCamera extends Entity {
 			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
 		] );
 
-		const f = 1.8;
+		this.rtDofDownSampling = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR, internalFormat: gl.RGBA16F, type: gl.HALF_FLOAT, format: gl.RGBA } ),
+		] );
+
 		const focalLength = 50.0 / 1000;
 		const focusDistance = 13;
 		const aperture = 5.0;
-		const A = focalLength / aperture;
+		// const A = focalLength / aperture;
 		const maxCoc = ( aperture * focalLength ) / ( focusDistance - focalLength );
 
 		this.dofCoc = new PostProcessPass( {
@@ -293,15 +299,22 @@ export class MainCamera extends Entity {
 				}
 			},
 			renderTarget: this.rtDofCoc,
-			// renderTarget: null
+		} );
+
+		this.dofDownSampling = new PostProcessPass( {
+			input: [ rt2.textures[ 0 ], this.rtDofCoc.textures[ 0 ] ],
+			frag: dofDownSampling,
+			uniforms: GLP.UniformsUtils.merge( {} ),
+			renderTarget: this.rtDofDownSampling
 		} );
 
 		this.dofBokeh = new PostProcessPass( {
-			input: [ this.rtDofCoc.textures[ 0 ], rt2.textures[ 0 ] ],
+			input: [ rt2.textures[ 0 ], this.rtDofDownSampling.textures[ 0 ] ],
 			frag: dofBokeh,
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time ),
 			renderTarget: null
 		} );
+
 
 		this.addComponent( "postprocess", new PostProcess( {
 			input: param.renderTarget.gBuffer.textures,
@@ -313,6 +326,7 @@ export class MainCamera extends Entity {
 				this.ssr,
 				this.composite,
 				this.dofCoc,
+				this.dofDownSampling,
 				this.dofBokeh,
 			] } )
 		);
@@ -323,6 +337,10 @@ export class MainCamera extends Entity {
 
 			resolution.copy( e.resolution );
 			resolutionInv.set( 1.0 / e.resolution.x, 1.0 / e.resolution.y, 0.0, 0.0 );
+
+			const resolutionHalf = resolution.clone().divide( 2 );
+			resolutionHalf.x = Math.max( Math.floor( resolutionHalf.x ), 1.0 );
+			resolutionHalf.y = Math.max( Math.floor( resolutionHalf.y ), 1.0 );
 
 			rt1.setSize( e.resolution );
 			rt2.setSize( e.resolution );
@@ -347,15 +365,12 @@ export class MainCamera extends Entity {
 			this.rtLightShaft1.setSize( e.resolution );
 			this.rtLightShaft2.setSize( e.resolution );
 
-			const lowRes = e.resolution.clone().multiply( 0.5 );
-			lowRes.x = Math.max( lowRes.x, 1.0 );
-			lowRes.y = Math.max( lowRes.y, 1.0 );
-
-			this.rtSSR1.setSize( lowRes );
-			this.rtSSR2.setSize( lowRes );
+			this.rtSSR1.setSize( resolutionHalf );
+			this.rtSSR2.setSize( resolutionHalf );
 
 			this.rtDofCoc.setSize( resolution );
 			this.rtDofBokeh.setSize( resolution );
+			this.rtDofDownSampling.setSize( resolutionHalf );
 
 		} );
 

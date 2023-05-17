@@ -64,24 +64,23 @@ const float bokehMaxSize = 0.006;
 void main( void ) {
 
 
-	float coc = texture( sampler0, vUv ).x * 2.0 - 1.0;
-	vec3 col = texture( sampler1, vUv ).xyz;
+	vec3 col = texture( sampler0, vUv ).xyz;
+	vec4 coc = texture( sampler1, vUv );
 
 	vec4 bgColor = vec4( 0.0 );
 	vec4 fgColor = vec4( 0.0 );
 
 	// initPoissonDisk(uTime);
 
-
 	for( int i = 0; i < BOKEH_SAMPLE; i ++  ) {
 			
 		vec2 offset = poissonDisk[ i ] * bokehMaxSize;
 		float radius = length( offset );
-		float offCoc = texture( sampler0, vUv + offset ).x * 2.0 - 1.0;
+		vec4 offCoc = texture( sampler1, vUv + offset );
 
-		if( abs( offCoc ) * 0.03 >= radius ) {
+		if( abs( offCoc.w ) * 0.03 >= radius ) {
 
-			bgColor.xyz += texture( sampler1, vUv + offset ).xyz;
+			bgColor.xyz += offCoc.xyz;
 			bgColor.w++;
 
 		}
