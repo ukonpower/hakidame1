@@ -1,15 +1,7 @@
 #include <common>
-#include <packing>
-#include <light>
-#include <re>
-#include <random>
 
 uniform sampler2D sampler0;
-uniform sampler2D sampler1;
-uniform sampler2D sampler4;
 uniform sampler2D uBloomTexture[4];
-uniform sampler2D uLightShaftTexture;
-uniform sampler2D uSSRTexture;
 
 uniform vec3 cameraPosition;
 uniform float cameraNear;
@@ -33,18 +25,13 @@ vec3 filmic(vec3 x) {
 
 void main( void ) {
 
-	vec4 gCol0 = texture( sampler0, vUv );
-	vec4 gCol1 = texture( sampler1, vUv );
-	vec3 dir = normalize( cameraPosition - gCol0.xyz );
-	float f = fresnel( dot( dir, gCol1.xyz ) );
 
 	vec3 col = vec3( 0.0, 0.0, 0.0 );
 	vec2 uv = vUv;
-
 	vec2 cuv = uv - 0.5;
 	float len = length(cuv);
 
-	col = texture( sampler4, vUv ).xyz;
+	col = texture( sampler0, vUv ).xyz;
 
 	#pragma loop_start 4
 		col += texture( uBloomTexture[ LOOP_INDEX ], uv ).xyz * ( 0.5 + float(LOOP_INDEX) * 0.5 ) * 0.2;
@@ -53,7 +40,5 @@ void main( void ) {
 	col *= smoothstep( 0.9, 0.3, len );
 
 	outColor = vec4( col, 1.0 );
-	outColor += texture( uLightShaftTexture, vUv ) * 0.3;
-	outColor += texture( uSSRTexture, vUv ) * 0.3 * f;
 
 }

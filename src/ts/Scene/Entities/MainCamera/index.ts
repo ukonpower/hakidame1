@@ -16,6 +16,7 @@ import ssrFrag from './shaders/ssr.fs';
 import dofCoc from './shaders/dofCoc.fs';
 import dofDownSampling from './shaders/dofDownSampling.fs';
 import dofBokeh from './shaders/dofBokeh.fs';
+import ssCompositeFrag from './shaders/ssComposite.fs';
 import compositeFrag from './shaders/composite.fs';
 
 export class MainCamera extends Entity {
@@ -33,6 +34,8 @@ export class MainCamera extends Entity {
 	private ssr: PostProcessPass;
 	public rtSSR1: GLP.GLPowerFrameBuffer;
 	public rtSSR2: GLP.GLPowerFrameBuffer;
+
+	private ssComposite: PostProcessPass;
 
 	public dofCoc: PostProcessPass;
 	public dofBokeh: PostProcessPass;
@@ -77,14 +80,151 @@ export class MainCamera extends Entity {
 			}
 		} );
 
+		// light shaft
+
+		this.rtLightShaft1 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
+		] );
+		this.rtLightShaft2 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
+		] );
+
+		this.lightShaft = new PostProcessPass( {
+			input: [],
+			frag: lightShaftFrag,
+			renderTarget: this.rtLightShaft1,
+			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
+				uLightShaftBackBuffer: {
+					value: this.rtLightShaft2.textures[ 0 ],
+					type: '1i'
+				},
+				uDepthTexture: {
+					value: param.renderTarget.gBuffer.depthTexture,
+					type: '1i'
+				},
+			} ),
+		} );
+
+		// ssr
+
+		this.rtSSR1 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
+		] );
+
+		this.rtSSR2 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
+		] );
+
+		this.ssr = new PostProcessPass( {
+			input: [ param.renderTarget.gBuffer.textures[ 0 ], param.renderTarget.gBuffer.textures[ 1 ] ],
+			frag: ssrFrag,
+			renderTarget: this.rtSSR1,
+			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
+				uResolution: {
+					value: resolution,
+					type: '2fv',
+				},
+				uResolutionInv: {
+					value: resolutionInv,
+					type: '2fv',
+				},
+				uSceneTex: {
+					value: param.renderTarget.forwardBuffer.textures[ 0 ],
+					type: '1i'
+				},
+				uSSRBackBuffer: {
+					value: this.rtSSR2.textures[ 0 ],
+					type: '1i'
+				},
+				uDepthTexture: {
+					value: param.renderTarget.gBuffer.depthTexture,
+					type: '1i'
+				},
+			} ),
+		} );
+
+		// ss-composite
+
+		this.ssComposite = new PostProcessPass( {
+			input: [ param.renderTarget.gBuffer.textures[ 0 ], param.renderTarget.gBuffer.textures[ 1 ], param.renderTarget.forwardBuffer.textures[ 0 ] ],
+			frag: ssCompositeFrag,
+			uniforms: GLP.UniformsUtils.merge( this.commonUniforms, {
+				uLightShaftTexture: {
+					value: this.rtLightShaft2.textures[ 0 ],
+					type: '1i'
+				},
+				uSSRTexture: {
+					value: this.rtSSR2.textures[ 0 ],
+					type: '1i'
+				},
+			} ),
+			renderTarget: rt1
+		} );
+
+
+		// dof
+
+		this.rtDofCoc = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR, internalFormat: gl.RGBA16F, type: gl.HALF_FLOAT, format: gl.RGBA } ),
+		] );
+
+		this.rtDofDownSampling = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR, internalFormat: gl.RGBA16F, type: gl.HALF_FLOAT, format: gl.RGBA } ),
+		] );
+
+		this.rtDofBokeh = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
+		] );
+
+		const flocalLength = 50;
+		const focusDistance = 13;
+		const aperture = 1.8;
+		const F = flocalLength / 1000;
+		const A = flocalLength / aperture;
+		const P = focusDistance;
+		const maxCoc = ( A * F ) / ( P - F );
+
+		this.dofCoc = new PostProcessPass( {
+			input: [ param.renderTarget.gBuffer.depthTexture ],
+			frag: dofCoc,
+			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
+				uParams: {
+					value: new GLP.Vector( focusDistance, maxCoc, 1, 1 ),
+					type: '4f'
+				},
+			} ),
+			renderTarget: this.rtDofCoc,
+		} );
+
+		this.dofDownSampling = new PostProcessPass( {
+			input: [ rt1.textures[ 0 ], this.rtDofCoc.textures[ 0 ] ],
+			frag: dofDownSampling,
+			uniforms: GLP.UniformsUtils.merge( {} ),
+			renderTarget: this.rtDofDownSampling
+		} );
+
+		this.dofBokeh = new PostProcessPass( {
+			input: [ rt1.textures[ 0 ], this.rtDofDownSampling.textures[ 0 ] ],
+			frag: dofBokeh,
+			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
+				uParams: {
+					value: new GLP.Vector( focusDistance, maxCoc, 1, 1 ),
+					type: '4f'
+				}
+			} ),
+			renderTarget: rt2
+		} );
+
+
 		// fxaa
 
 		this.fxaa = new PostProcessPass( {
-			input: param.renderTarget.deferredBuffer.textures,
+			input: [ rt2.textures[ 0 ] ],
 			frag: fxaaFrag,
 			uniforms: this.commonUniforms,
 			renderTarget: rt1
 		} );
+
 
 		// bloom
 
@@ -180,154 +320,36 @@ export class MainCamera extends Entity {
 
 		}
 
-
-		// light shaft
-
-		this.rtLightShaft1 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
-			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
-		] );
-		this.rtLightShaft2 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
-			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
-		] );
-
-		this.lightShaft = new PostProcessPass( {
-			input: [],
-			frag: lightShaftFrag,
-			renderTarget: this.rtLightShaft1,
-			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
-				uLightShaftBackBuffer: {
-					value: this.rtLightShaft2.textures[ 0 ],
-					type: '1i'
-				},
-				uDepthTexture: {
-					value: param.renderTarget.gBuffer.depthTexture,
-					type: '1i'
-				},
-			} ),
-		} );
-
-		// ssr
-
-		this.rtSSR1 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
-			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
-		] );
-
-		this.rtSSR2 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
-			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
-		] );
-
-		this.ssr = new PostProcessPass( {
-			input: [ param.renderTarget.gBuffer.textures[ 0 ], param.renderTarget.gBuffer.textures[ 1 ] ],
-			frag: ssrFrag,
-			renderTarget: this.rtSSR1,
-			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
-				uResolution: {
-					value: resolution,
-					type: '2fv',
-				},
-				uResolutionInv: {
-					value: resolutionInv,
-					type: '2fv',
-				},
-				uSceneTex: {
-					value: rt1.textures[ 0 ],
-					type: '1i'
-				},
-				uSSRBackBuffer: {
-					value: this.rtSSR2.textures[ 0 ],
-					type: '1i'
-				},
-				uDepthTexture: {
-					value: param.renderTarget.gBuffer.depthTexture,
-					type: '1i'
-				},
-			} ),
-		} );
-
 		// composite
 
 		this.composite = new PostProcessPass( {
-			input: [ ...param.renderTarget.gBuffer.textures, rt1.textures[ 0 ] ],
+			input: [ rt1.textures[ 0 ] ],
 			frag: compositeFrag,
 			uniforms: GLP.UniformsUtils.merge( this.commonUniforms, {
 				uBloomTexture: {
 					value: rtBloomHorizonal.map( rt => rt.textures[ 0 ] ),
 					type: '1iv'
 				},
-				uLightShaftTexture: {
-					value: this.rtLightShaft2.textures[ 0 ],
-					type: '1i'
-				},
-				uSSRTexture: {
-					value: this.rtSSR2.textures[ 0 ],
-					type: '1i'
-				},
 			} ),
 			defines: {
 				BLOOM_COUNT: bloomRenderCount.toString()
 			},
-			renderTarget: rt2
-		} );
-
-		// dof
-
-		this.rtDofCoc = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
-			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR, internalFormat: gl.RGBA16F, type: gl.HALF_FLOAT, format: gl.RGBA } ),
-		] );
-
-		this.rtDofBokeh = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
-			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
-		] );
-
-		this.rtDofDownSampling = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
-			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR, internalFormat: gl.RGBA16F, type: gl.HALF_FLOAT, format: gl.RGBA } ),
-		] );
-
-		const focalLength = 50.0 / 1000;
-		const focusDistance = 13;
-		const aperture = 5.0;
-		// const A = focalLength / aperture;
-		const maxCoc = ( aperture * focalLength ) / ( focusDistance - focalLength );
-
-		this.dofCoc = new PostProcessPass( {
-			input: [ param.renderTarget.gBuffer.depthTexture ],
-			frag: dofCoc,
-			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
-				uParams: {
-					value: new GLP.Vector( focusDistance, 100, maxCoc, 1 ),
-					type: '4f'
-				}
-			} ),
-			renderTarget: this.rtDofCoc,
-		} );
-
-		this.dofDownSampling = new PostProcessPass( {
-			input: [ rt2.textures[ 0 ], this.rtDofCoc.textures[ 0 ] ],
-			frag: dofDownSampling,
-			uniforms: GLP.UniformsUtils.merge( {} ),
-			renderTarget: this.rtDofDownSampling
-		} );
-
-		this.dofBokeh = new PostProcessPass( {
-			input: [ rt2.textures[ 0 ], this.rtDofDownSampling.textures[ 0 ] ],
-			frag: dofBokeh,
-			uniforms: GLP.UniformsUtils.merge( globalUniforms.time ),
 			renderTarget: null
 		} );
-
 
 		this.addComponent( "postprocess", new PostProcess( {
 			input: param.renderTarget.gBuffer.textures,
 			passes: [
-				this.fxaa,
-				this.bloomBright,
-				...this.bloomBlur,
 				this.lightShaft,
 				this.ssr,
-				this.composite,
+				this.ssComposite,
 				this.dofCoc,
 				this.dofDownSampling,
 				this.dofBokeh,
+				this.fxaa,
+				this.bloomBright,
+				...this.bloomBlur,
+				this.composite,
 			] } )
 		);
 
@@ -370,7 +392,7 @@ export class MainCamera extends Entity {
 
 			this.rtDofCoc.setSize( resolution );
 			this.rtDofBokeh.setSize( resolution );
-			this.rtDofDownSampling.setSize( resolutionHalf );
+			this.rtDofDownSampling.setSize( resolutionHalf.clone() );
 
 		} );
 
@@ -420,7 +442,7 @@ export class MainCamera extends Entity {
 		this.rtLightShaft2 = tmp;
 
 		this.lightShaft.renderTarget = this.rtLightShaft1;
-		this.composite.uniforms.uLightShaftTexture.value = this.rtLightShaft1.textures[ 0 ];
+		this.ssComposite.uniforms.uLightShaftTexture.value = this.rtLightShaft1.textures[ 0 ];
 		this.lightShaft.uniforms.uLightShaftBackBuffer.value = this.rtLightShaft2.textures[ 0 ];
 
 		// ssr swap
@@ -430,7 +452,7 @@ export class MainCamera extends Entity {
 		this.rtSSR2 = tmp;
 
 		this.ssr.renderTarget = this.rtSSR1;
-		this.composite.uniforms.uSSRTexture.value = this.rtSSR1.textures[ 0 ];
+		this.ssComposite.uniforms.uSSRTexture.value = this.rtSSR1.textures[ 0 ];
 		this.ssr.uniforms.uSSRBackBuffer.value = this.rtSSR2.textures[ 0 ];
 
 	}

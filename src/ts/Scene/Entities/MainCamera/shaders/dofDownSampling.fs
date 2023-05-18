@@ -9,9 +9,18 @@ layout (location = 0) out vec4 outColor;
 
 void main( void ) {
 
-	vec4 color = texelFetch( sampler0, ivec2(gl_FragCoord.xy * 2.0 ), 0 );
-	vec4 coc = texelFetch( sampler1, ivec2(gl_FragCoord.xy * 2.0 ), 0 );
+	ivec2 uv = ivec2(gl_FragCoord.xy * 2.0 );
 
-    outColor = vec4( color.xyz, coc.x * 2.0 - 1.0 );
+	vec4 color = vec4( 0.0 );
+	vec4 col1 = texelFetch( sampler0, uv + ivec2( 1, 1 ), 0 );
+	vec4 col2 = texelFetch( sampler0, uv + ivec2( -1, 1 ), 0 );
+	vec4 col3 = texelFetch( sampler0, uv + ivec2( 1, -1 ), 0 );
+	vec4 col4 = texelFetch( sampler0, uv + ivec2( -1, -1 ), 0 );
+
+	vec4 coc = texelFetch( sampler1, uv, 0 );
+
+	color.xyz = ( col1.xyz + col2.xyz + col3.xyz + col4.xyz ) / 4.0;
+
+    outColor = vec4( color.xyz, coc.x );
 
 }

@@ -16,8 +16,9 @@ void main( void ) {
 
 	vec4 depth = projectionMatrixInverse * vec4( vUv * 2.0 - 1.0, texture( sampler0, vUv ).x * 2.0 - 1.0, 1.0 );
 	depth.xyz /= depth.w * - 1.0;
-    float coc = 1.0 - ( (uParams.x + sin( uTime ) * 5.0) / depth.z );
-	coc = clamp( coc * 0.5 + 0.5, 0.0, 1.0 );
+
+    float coc = ( depth.z - (uParams.x + sin( uTime ) * 5.0) ) / depth.z;
+	coc = clamp( coc, - uParams.y, uParams.y );
 
     outColor = vec4( coc );
 
