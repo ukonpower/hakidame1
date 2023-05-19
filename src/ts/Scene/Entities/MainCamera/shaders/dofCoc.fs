@@ -3,7 +3,6 @@
 uniform sampler2D sampler0;
 uniform sampler2D sampler1;
 uniform vec4 uParams;
-uniform float uTime;
 uniform mat4 projectionMatrixInverse;
 
 in vec2 vUv;
@@ -27,7 +26,7 @@ float max3(vec3 xyz) { return max(xyz.x, max(xyz.y, xyz.z)); }
 // Fragment shader: Downsampling, prefiltering and CoC calculation
 void main( void ) {
 
-	float _Distance = uParams.x + sin(uTime) * 5.0;
+	float _Distance = uParams.x;
 	float _MaxCoC = uParams.y;
 	float _RcpMaxCoC = uParams.z;
 	float _LensCoeff = uParams.w;

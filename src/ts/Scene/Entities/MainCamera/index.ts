@@ -23,6 +23,8 @@ export class MainCamera extends Entity {
 
 	private commonUniforms: GLP.Uniforms;
 
+	private cameraComponent: RenderCamera;
+
 	private fxaa: PostProcessPass;
 	private bloomBright: PostProcessPass;
 	private bloomBlur: PostProcessPass[];
@@ -37,6 +39,7 @@ export class MainCamera extends Entity {
 
 	private ssComposite: PostProcessPass;
 
+	private dofParams: GLP.Vector;
 	public dofCoc: PostProcessPass;
 	public dofBokeh: PostProcessPass;
 	public dofComposite: PostProcessPass;
@@ -52,7 +55,7 @@ export class MainCamera extends Entity {
 
 		// camera component
 
-		const cameraComponent = this.addComponent( "camera", new RenderCamera( param ) );
+		this.cameraComponent = this.addComponent( "camera", new RenderCamera( param ) );
 		this.addComponent( 'orbitControls', new OrbitControls( canvas ) );
 
 		// resolution
@@ -185,14 +188,14 @@ export class MainCamera extends Entity {
 		const maxCoc = ( A * F ) / ( P - F );
 		const rcpMaxCoC = 1.0 / maxCoc;
 
-		const dofParams = new GLP.Vector( focusDistance, maxCoc, rcpMaxCoC, 0.05 );
+		this.dofParams = new GLP.Vector( focusDistance, maxCoc, rcpMaxCoC, 0.05 );
 
 		this.dofCoc = new PostProcessPass( {
 			input: [ rt1.textures[ 0 ], param.renderTarget.gBuffer.depthTexture ],
 			frag: dofCoc,
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
 				uParams: {
-					value: dofParams,
+					value: this.dofParams,
 					type: '4f'
 				},
 			} ),
@@ -204,7 +207,7 @@ export class MainCamera extends Entity {
 			frag: dofBokeh,
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
 				uParams: {
-					value: dofParams,
+					value: this.dofParams,
 					type: '4f'
 				}
 			} ),
@@ -371,8 +374,8 @@ export class MainCamera extends Entity {
 			rt2.setSize( e.resolution );
 			rt3.setSize( e.resolution );
 
-			cameraComponent.aspect = e.resolution.x / e.resolution.y;
-			cameraComponent.updateProjectionMatrix();
+			this.cameraComponent.aspect = e.resolution.x / e.resolution.y;
+			this.cameraComponent.updateProjectionMatrix();
 
 			let scale = 2;
 
@@ -437,6 +440,18 @@ export class MainCamera extends Entity {
 	}
 
 	protected updateImpl( event: ComponentUpdateEvent ): void {
+
+		// dof
+
+		const fov = this.cameraComponent.fov;
+
+		const focusDistance = this.matrixWorld.elm[ 14 ];
+		const kFilmHeight = 0.036;
+		const flocalLength = 0.5 * kFilmHeight / Math.tan( 0.5 * ( fov / 180 * Math.PI ) );
+		const maxCoc = 1 / this.rtDofBokeh.size.y * 6.0;
+		const rcpMaxCoC = 1.0 / maxCoc;
+		const coeff = flocalLength * flocalLength / ( 1.4 * ( focusDistance - flocalLength ) * kFilmHeight * 2 ) * 1.5;
+		this.dofParams.set( focusDistance, maxCoc, rcpMaxCoC, coeff );
 
 		// light shaft swap
 
