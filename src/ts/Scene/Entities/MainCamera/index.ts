@@ -14,7 +14,7 @@ import bloomBrightFrag from './shaders/bloomBright.fs';
 import lightShaftFrag from './shaders/lightShaft.fs';
 import ssrFrag from './shaders/ssr.fs';
 import dofCoc from './shaders/dofCoc.fs';
-import dofDownSampling from './shaders/dofDownSampling.fs';
+import dofComposite from './shaders/dofComposite.fs';
 import dofBokeh from './shaders/dofBokeh.fs';
 import ssCompositeFrag from './shaders/ssComposite.fs';
 import compositeFrag from './shaders/composite.fs';
@@ -39,10 +39,10 @@ export class MainCamera extends Entity {
 
 	public dofCoc: PostProcessPass;
 	public dofBokeh: PostProcessPass;
-	public dofDownSampling: PostProcessPass;
+	public dofComposite: PostProcessPass;
 	public rtDofCoc: GLP.GLPowerFrameBuffer;
 	public rtDofBokeh: GLP.GLPowerFrameBuffer;
-	public rtDofDownSampling: GLP.GLPowerFrameBuffer;
+	public rtDofComposite: GLP.GLPowerFrameBuffer;
 
 	private composite: PostProcessPass;
 
@@ -168,7 +168,7 @@ export class MainCamera extends Entity {
 			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR, internalFormat: gl.RGBA16F, type: gl.HALF_FLOAT, format: gl.RGBA } ),
 		] );
 
-		this.rtDofDownSampling = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+		this.rtDofComposite = new GLP.GLPowerFrameBuffer( gl ).setTexture( [
 			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR, internalFormat: gl.RGBA16F, type: gl.HALF_FLOAT, format: gl.RGBA } ),
 		] );
 
@@ -178,48 +178,51 @@ export class MainCamera extends Entity {
 
 		const flocalLength = 50;
 		const focusDistance = 13;
-		const aperture = 1.8;
+		const aperture = 20.0;
 		const F = flocalLength / 1000;
 		const A = flocalLength / aperture;
 		const P = focusDistance;
 		const maxCoc = ( A * F ) / ( P - F );
+		const rcpMaxCoC = 1.0 / maxCoc;
+
+		const dofParams = new GLP.Vector( focusDistance, maxCoc, rcpMaxCoC, 0.05 );
 
 		this.dofCoc = new PostProcessPass( {
-			input: [ param.renderTarget.gBuffer.depthTexture ],
+			input: [ rt1.textures[ 0 ], param.renderTarget.gBuffer.depthTexture ],
 			frag: dofCoc,
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
 				uParams: {
-					value: new GLP.Vector( focusDistance, maxCoc, 1, 1 ),
+					value: dofParams,
 					type: '4f'
 				},
 			} ),
 			renderTarget: this.rtDofCoc,
 		} );
 
-		this.dofDownSampling = new PostProcessPass( {
-			input: [ rt1.textures[ 0 ], this.rtDofCoc.textures[ 0 ] ],
-			frag: dofDownSampling,
-			uniforms: GLP.UniformsUtils.merge( {} ),
-			renderTarget: this.rtDofDownSampling
-		} );
-
 		this.dofBokeh = new PostProcessPass( {
-			input: [ rt1.textures[ 0 ], this.rtDofDownSampling.textures[ 0 ] ],
+			input: [ this.rtDofCoc.textures[ 0 ] ],
 			frag: dofBokeh,
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
 				uParams: {
-					value: new GLP.Vector( focusDistance, maxCoc, 1, 1 ),
+					value: dofParams,
 					type: '4f'
 				}
 			} ),
-			renderTarget: rt2
+			renderTarget: this.rtDofBokeh
 		} );
 
+		this.dofComposite = new PostProcessPass( {
+			input: [ rt1.textures[ 0 ], this.rtDofBokeh.textures[ 0 ] ],
+			frag: dofComposite,
+			uniforms: GLP.UniformsUtils.merge( {} ),
+			renderTarget: this.rtDofComposite
+			// renderTarget: null
+		} );
 
 		// fxaa
 
 		this.fxaa = new PostProcessPass( {
-			input: [ rt2.textures[ 0 ] ],
+			input: [ this.rtDofComposite.textures[ 0 ] ],
 			frag: fxaaFrag,
 			uniforms: this.commonUniforms,
 			renderTarget: rt1
@@ -344,8 +347,8 @@ export class MainCamera extends Entity {
 				this.ssr,
 				this.ssComposite,
 				this.dofCoc,
-				this.dofDownSampling,
 				this.dofBokeh,
+				this.dofComposite,
 				this.fxaa,
 				this.bloomBright,
 				...this.bloomBlur,
@@ -390,9 +393,9 @@ export class MainCamera extends Entity {
 			this.rtSSR1.setSize( resolutionHalf );
 			this.rtSSR2.setSize( resolutionHalf );
 
-			this.rtDofCoc.setSize( resolution );
-			this.rtDofBokeh.setSize( resolution );
-			this.rtDofDownSampling.setSize( resolutionHalf.clone() );
+			this.rtDofCoc.setSize( resolutionHalf );
+			this.rtDofBokeh.setSize( resolutionHalf );
+			this.rtDofComposite.setSize( resolution );
 
 		} );
 

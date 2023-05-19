@@ -14,7 +14,7 @@ layout (location = 0) out vec4 outColor;
 // vec2 poissonDisk[ BOKEH_SAMPLE ];
 
 #define BOKEH_SAMPLE 43
-vec2 poissonDisk[ BOKEH_SAMPLE ] = vec2[](
+vec2 kDiskKernel[ BOKEH_SAMPLE ] = vec2[](
     vec2(0,0),
     vec2(0.36363637,0),
     vec2(0.22672357,0.28430238),
@@ -60,77 +60,65 @@ vec2 poissonDisk[ BOKEH_SAMPLE ] = vec2[](
     vec2(0.9555729,-0.29475483)
 );
 
-void initPoissonDisk( float seed ) {
-
-	float r = 0.5;
-	float rStep = (r) / float( BOKEH_SAMPLE );
-
-	float ang = 0.0;//random( gl_FragCoord.xy * 0.01 + sin( seed ) ) * TPI * 1.0;
-	float angStep = ( ( TPI * 17.0 ) / float( BOKEH_SAMPLE ) );
-	
-	for( int i = 0; i < BOKEH_SAMPLE; i++ ) {
-
-		poissonDisk[ i ] = vec2(
-			sin( ang ),
-			cos( ang )
-		) * pow( r, 0.5 );
-
-		r += rStep;
-		ang += angStep;
-	}
-	
-}
-
-
+// Fragment shader: Bokeh filter with disk-shaped kernels
 void main( void ) {
 
-	vec2 size = vec2( textureSize(sampler1, 0) );
-	vec2 texelSize = 1.0 / size;
-	float aspect = size.x / size.y;
+	float _MaxCoC = uParams.y;
+	float _RcpMaxCoC = uParams.z;
+	vec2 _MainTex_TexelSize = vec2( 1.0 ) / vec2( textureSize( sampler0, 0 ) );
+	float _RcpAspect = _MainTex_TexelSize.x / _MainTex_TexelSize.y;
+	// sampler2D _MainTex = sampler0;
 
-	vec3 col = texture( sampler0, vUv ).xyz;
-	vec4 coc = texture( sampler1, vUv );
+    vec4 samp0 = texture(sampler0, vUv);
 
-	vec4 bgColor = vec4( 0.0 );
-	vec4 fgColor = vec4( 0.0 );
+    vec4 bgAcc = vec4(0.0); // Background: far field bokeh
+    vec4 fgAcc = vec4(0.0); // Foreground: near field bokeh
 
-	for( int i = 0; i < BOKEH_SAMPLE; i ++  ) {
-			
-		vec2 offset = poissonDisk[ i ] * uParams.y;
-		offset.y *= aspect;
-		float radius = length( offset );
-		vec4 offCoc = texture( sampler1, vUv + offset * 0.12 );
+    for (int si = 0; si < BOKEH_SAMPLE; si++)
+    {
+        vec2 disp = kDiskKernel[si] * _MaxCoC;
+        float dist = length(disp);
 
-		float farCoc = max( 0.0, min( coc.w, offCoc.w ) );
-		float nearCoc = -offCoc.w;
+        vec2 duv = vec2(disp.x * _RcpAspect, disp.y);
+        vec4 samp = texture(sampler0, vUv + duv);
 
-		float bgWeight = clamp( farCoc - radius, 0.0, 1.0 );
-		bgColor += vec4( offCoc.xyz, 1.0 ) * bgWeight;
-		
-		float fgWeight = clamp( nearCoc - radius, 0.0, 1.0 );
-		fgColor += vec4( offCoc.xyz, 1.0 ) * fgWeight;
-		
-	}
+        // BG: Compare CoC of the current sample and the center sample
+        // and select smaller one.
+        float bgCoC = max(min(samp0.a, samp.a), 0.0);
 
-	if( bgColor.w == 0.0 ) {
+        // Compare the CoC to the sample distance.
+        // Add a small margin to smooth out.
+        float margin = _MainTex_TexelSize.y * 2.0;
+        float bgWeight = clamp((bgCoC   - dist + margin ) / margin, 0.0, 1.0);
+        float fgWeight = clamp((-samp.a - dist + margin ) / margin, 0.0, 1.0);
 
-		bgColor += vec4( col.xyz, 1.0 );
-		
-	}
+        // Cut influence from focused areas because they're darkened by CoC
+        // premultiplying. This is only needed for near field.
+        fgWeight *= step(_MainTex_TexelSize.y, -samp.a);
 
-	// if( fgColor.w == 0.0 ) {
+        // Accumulation
+        bgAcc += vec4(samp.rgb, 1.0) * bgWeight;
+        fgAcc += vec4(samp.rgb, 1.0) * fgWeight;
+    }
 
-		// fgColor += vec4( col.xyz, 1.0 );
-		
-	// }
-	
-	bgColor.xyz /= bgColor.w + ( bgColor.w == 0.0 ? 1.0 : 0.0 );
-	fgColor.xyz /= fgColor.w + ( fgColor.w == 0.0 ? 1.0 : 0.0 );
+    // Get the weighted average.
+    bgAcc.rgb /= bgAcc.a + (bgAcc.a == 0.0 ? 1.0 : 0.0 ); // zero-div guard
+    fgAcc.rgb /= fgAcc.a + (fgAcc.a == 0.0 ? 1.0 : 0.0 );
 
-	col = mix( bgColor.xyz, fgColor.xyz, fgColor.w );
+    // BG: Calculate the alpha value only based on the center CoC.
+    // This is a rather aggressive approximation but provides stable results.
+    bgAcc.a = smoothstep(_MainTex_TexelSize.y, _MainTex_TexelSize.y * 2.0, samp0.a);
 
-	outColor = vec4( col, 1.0 );
-	// outColor = vec4( vec3( abs( fgColor.w ) * 1.0 ), 1.0 );
-	// outColor = vec4( fgColor.xyz, 1.0 );
+    // FG: Normalize the total of the weights.
+    fgAcc.a *= PI / float(BOKEH_SAMPLE);
 
+    // Alpha premultiplying
+    vec3 rgb = vec3( 0.0 );
+    rgb = mix(rgb, bgAcc.rgb, clamp(bgAcc.a, 0.0, 1.0));
+    rgb = mix(rgb, fgAcc.rgb, clamp(fgAcc.a, 0.0, 1.0));
+
+    // Combined alpha value
+    float alpha = (1.0 - clamp(bgAcc.a, 0.0, 1.0)) * (1.0 - clamp(fgAcc.a, 0.0, 1.0));
+
+    outColor = vec4(rgb, alpha);
 }
