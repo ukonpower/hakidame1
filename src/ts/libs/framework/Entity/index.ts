@@ -23,7 +23,6 @@ export class Entity extends GLP.EventEmitter {
 	public uuid: number;
 
 	public position: GLP.Vector;
-	public rotation: GLP.Euler;
 	public quaternion: GLP.Quaternion;
 	public scale: GLP.Vector;
 
@@ -46,7 +45,6 @@ export class Entity extends GLP.EventEmitter {
 		this.uuid = new Date().getTime() + Math.floor( Math.random() * 1000000 );
 
 		this.position = new GLP.Vector();
-		this.rotation = new GLP.Euler();
 		this.quaternion = new GLP.Quaternion( 0.0, 0.0, 0.0, 1.0 );
 		this.scale = new GLP.Vector( 1.0, 1.0, 1.0 );
 
@@ -110,8 +108,6 @@ export class Entity extends GLP.EventEmitter {
 		}
 
 		// matrix
-
-		this.quaternion.setFromEuler( this.rotation );
 
 		if ( ! event.matrix ) event.matrix = new GLP.Matrix();
 
@@ -231,6 +227,61 @@ export class Entity extends GLP.EventEmitter {
 		this.components.delete( name );
 
 		return component;
+
+	}
+
+	/*-------------------------------
+		API
+	-------------------------------*/
+
+	public getEntityByName( name: string ) : Entity | null {
+
+		if ( this.name == name ) {
+
+			return this;
+
+		}
+
+		for ( let i = 0; i < this.children.length; i ++ ) {
+
+			const c = this.children[ i ];
+
+			const entity = c.getEntityByName( name );
+
+			if ( entity ) {
+
+				return entity;
+
+			}
+
+		}
+
+		return null;
+
+	}
+
+	/*-------------------------------
+		Event
+	-------------------------------*/
+
+	public notice( eventName: string, opt?: any ) {
+
+		this.emit( "notice/" + eventName, [ opt ] );
+
+
+	}
+
+	public noticeRecursive( eventName: string, opt?: any ) {
+
+		this.notice( eventName, opt );
+
+		for ( let i = 0; i < this.children.length; i ++ ) {
+
+			const c = this.children[ i ];
+
+			c.noticeRecursive( eventName, opt );
+
+		}
 
 	}
 

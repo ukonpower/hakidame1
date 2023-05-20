@@ -186,6 +186,14 @@ export class Carpenter extends GLP.EventEmitter {
 
 		} );
 
+		// blidger
+
+		if ( this.blidgeRoot ) {
+
+			this.blidgeRoot.noticeRecursive( "sceneCreated", this.blidgeRoot );
+
+		}
+
 	}
 
 }

@@ -34,19 +34,11 @@ export class Component extends GLP.EventEmitter {
 
 	public setEntity( entity: Entity | null ) {
 
-		if ( this.entity ) {
-
-			this.onRemoveEnpty( this.entity );
-
-		}
+		const beforeEntity = entity;
 
 		this.entity = entity;
 
-		if ( this.entity ) {
-
-			this.onSetEntity( this.entity );
-
-		}
+		this.setEntityImpl( this.entity, beforeEntity );
 
 	}
 
@@ -70,10 +62,7 @@ export class Component extends GLP.EventEmitter {
 
 	}
 
-	protected onSetEntity( entity: Entity ) {
-	}
-
-	protected onRemoveEnpty( entity: Entity ) {
+	protected setEntityImpl( entity: Entity | null, prevEntity: Entity | null ) {
 	}
 
 	protected updateImpl( event: ComponentUpdateEvent ) {

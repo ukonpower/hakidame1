@@ -1,20 +1,23 @@
 import * as GLP from 'glpower';
 import { Component, ComponentUpdateEvent } from '..';
 import { Pointer, PointerEventArgs } from '~/ts/libs/Pointer';
+import { Camera } from '../Camera';
 
 export class OrbitControls extends Component {
 
 	private pointer: Pointer;
-	private offsetRot: GLP.Vector;
 	private offsetPos: GLP.Vector;
+	private offsetPosTmp: GLP.Vector;
+	private matrixTmp: GLP.Matrix;
 
 	constructor( targetElm: HTMLCanvasElement ) {
 
 		super();
 
 		this.pointer = new Pointer();
-		this.offsetRot = new GLP.Vector();
 		this.offsetPos = new GLP.Vector();
+		this.offsetPosTmp = new GLP.Vector();
+		this.matrixTmp = new GLP.Matrix();
 
 		this.pointer.registerElement( targetElm );
 
@@ -32,7 +35,7 @@ export class OrbitControls extends Component {
 
 			if ( ! touching ) return;
 
-			this.offsetRot.add( { x: e.delta.x * 0.003, y: e.delta.y * 0.003 } );
+			this.offsetPos.add( { x: e.delta.x * 0.003, y: e.delta.y * 0.003 } );
 
 		} );
 
@@ -42,7 +45,7 @@ export class OrbitControls extends Component {
 
 			touching = false;
 
-			this.offsetRot.set( 0, 0 );
+			this.offsetPos.set( 0, 0 );
 
 		} );
 
@@ -54,20 +57,19 @@ export class OrbitControls extends Component {
 
 		const qua = new GLP.Quaternion().copy( event.entity.quaternion );
 
-		this.offsetPos.set( this.offsetRot.x, - this.offsetRot.y, 0.0, 1.0 );
-		this.offsetPos.applyMatrix4( new GLP.Matrix().applyQuaternion( qua ) );
+		this.offsetPosTmp.set( this.offsetPos.x, - this.offsetPos.y, 0.0, 1.0 );
+		this.offsetPos.applyMatrix4( this.matrixTmp.identity().applyQuaternion( qua ) );
+		entity.matrixWorld.multiply( this.matrixTmp.identity().applyPosition( this.offsetPosTmp ) );
 
-		entity.position.set( 0, 0, 0, 1 );
-		entity.position.applyMatrix4( new GLP.Matrix().applyPosition( this.offsetPos ) );
+		// calc viewmatrix
 
-		// positionComponent.x = pos.x;
-		// positionComponent.y = pos.y;
-		// positionComponent.z = pos.z;
+		const cameraComponent = entity.getComponent<Camera>( "camera" );
 
-		// rotComponent.x = qua.x;
-		// rotComponent.y = qua.y;
-		// rotComponent.z = qua.z;
-		// rotComponent.w = qua.w;
+		if ( cameraComponent ) {
+
+			cameraComponent.viewMatrix.copy( entity.matrixWorld ).inverse();
+
+		}
 
 	}
 

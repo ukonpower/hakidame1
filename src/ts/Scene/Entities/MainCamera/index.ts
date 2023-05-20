@@ -18,6 +18,7 @@ import dofComposite from './shaders/dofComposite.fs';
 import dofBokeh from './shaders/dofBokeh.fs';
 import ssCompositeFrag from './shaders/ssComposite.fs';
 import compositeFrag from './shaders/composite.fs';
+import { LookAt } from '~/ts/libs/framework/Components/LookAt';
 
 export class MainCamera extends Entity {
 
@@ -25,19 +26,42 @@ export class MainCamera extends Entity {
 
 	private cameraComponent: RenderCamera;
 
+	// common rendertarget
+
+	private rt1: GLP.GLPowerFrameBuffer;
+	private rt2: GLP.GLPowerFrameBuffer;
+	private rt3: GLP.GLPowerFrameBuffer;
+
+	// fxaa
+
 	private fxaa: PostProcessPass;
+
+	// bloom
+
+	private bloomRenderCount: number;
 	private bloomBright: PostProcessPass;
 	private bloomBlur: PostProcessPass[];
+	private rtBloomVertical: GLP.GLPowerFrameBuffer[];
+	private rtBloomHorizonal: GLP.GLPowerFrameBuffer[];
+
+
+	// light shaft
 
 	private lightShaft: PostProcessPass;
 	public rtLightShaft1: GLP.GLPowerFrameBuffer;
 	public rtLightShaft2: GLP.GLPowerFrameBuffer;
 
+	// ssr
+
 	private ssr: PostProcessPass;
 	public rtSSR1: GLP.GLPowerFrameBuffer;
 	public rtSSR2: GLP.GLPowerFrameBuffer;
 
+	// ss composite
+
 	private ssComposite: PostProcessPass;
+
+	// dof
 
 	private dofParams: GLP.Vector;
 	public dofCoc: PostProcessPass;
@@ -47,39 +71,55 @@ export class MainCamera extends Entity {
 	public rtDofBokeh: GLP.GLPowerFrameBuffer;
 	public rtDofComposite: GLP.GLPowerFrameBuffer;
 
+	// composite
+
 	private composite: PostProcessPass;
+
+	// resolutions
+
+	private resolution: GLP.Vector;
+	private resolutionInv: GLP.Vector;
+	private resolutionBloom: GLP.Vector[];
 
 	constructor( param: RenderCameraParam ) {
 
 		super();
 
-		// camera component
+		// components
 
 		this.cameraComponent = this.addComponent( "camera", new RenderCamera( param ) );
 		this.addComponent( 'orbitControls', new OrbitControls( canvas ) );
 
+		const lookAt = this.addComponent( 'lookAt', new LookAt() );
+
+		this.on( 'notice/sceneCreated', ( root: Entity ) => {
+
+			lookAt.setTarget( root.getEntityByName( "CameraTarget" ) );
+
+		} );
+
 		// resolution
 
-		const resolution = new GLP.Vector();
-		const resolutionInv = new GLP.Vector();
-		const resolutionBloom: GLP.Vector[] = [];
+		this.resolution = new GLP.Vector();
+		this.resolutionInv = new GLP.Vector();
+		this.resolutionBloom = [];
 
 		// rt
 
-		const rt1 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [ power.createTexture() ] );
-		const rt2 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [ power.createTexture() ] );
-		const rt3 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [ power.createTexture() ] );
+		this.rt1 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [ power.createTexture() ] );
+		this.rt2 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [ power.createTexture() ] );
+		this.rt3 = new GLP.GLPowerFrameBuffer( gl ).setTexture( [ power.createTexture() ] );
 
 		// uniforms
 
 		this.commonUniforms = GLP.UniformsUtils.merge( {
 			uResolution: {
 				type: "2f",
-				value: resolution
+				value: this.resolution
 			},
 			uResolutionInv: {
 				type: "2f",
-				value: resolutionInv
+				value: this.resolutionInv
 			}
 		} );
 
@@ -124,11 +164,11 @@ export class MainCamera extends Entity {
 			renderTarget: this.rtSSR1,
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
 				uResolution: {
-					value: resolution,
+					value: this.resolution,
 					type: '2fv',
 				},
 				uResolutionInv: {
-					value: resolutionInv,
+					value: this.resolutionInv,
 					type: '2fv',
 				},
 				uSceneTex: {
@@ -161,9 +201,8 @@ export class MainCamera extends Entity {
 					type: '1i'
 				},
 			} ),
-			renderTarget: rt1
+			renderTarget: this.rt1
 		} );
-
 
 		// dof
 
@@ -191,7 +230,7 @@ export class MainCamera extends Entity {
 		this.dofParams = new GLP.Vector( focusDistance, maxCoc, rcpMaxCoC, 0.05 );
 
 		this.dofCoc = new PostProcessPass( {
-			input: [ rt1.textures[ 0 ], param.renderTarget.gBuffer.depthTexture ],
+			input: [ this.rt1.textures[ 0 ], param.renderTarget.gBuffer.depthTexture ],
 			frag: dofCoc,
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
 				uParams: {
@@ -215,11 +254,10 @@ export class MainCamera extends Entity {
 		} );
 
 		this.dofComposite = new PostProcessPass( {
-			input: [ rt1.textures[ 0 ], this.rtDofBokeh.textures[ 0 ] ],
+			input: [ this.rt1.textures[ 0 ], this.rtDofBokeh.textures[ 0 ] ],
 			frag: dofComposite,
 			uniforms: GLP.UniformsUtils.merge( {} ),
 			renderTarget: this.rtDofComposite
-			// renderTarget: null
 		} );
 
 		// fxaa
@@ -228,31 +266,30 @@ export class MainCamera extends Entity {
 			input: [ this.rtDofComposite.textures[ 0 ] ],
 			frag: fxaaFrag,
 			uniforms: this.commonUniforms,
-			renderTarget: rt1
+			renderTarget: this.rt1
 		} );
-
 
 		// bloom
 
-		const bloomRenderCount = 4;
+		this.bloomRenderCount = 4;
 
-		const rtBloomVertical: GLP.GLPowerFrameBuffer[] = [];
-		const rtBloomHorizonal: GLP.GLPowerFrameBuffer[] = [];
+		this.rtBloomVertical = [];
+		this.rtBloomHorizonal = [];
 
-		for ( let i = 0; i < bloomRenderCount; i ++ ) {
+		for ( let i = 0; i < this.bloomRenderCount; i ++ ) {
 
-			rtBloomVertical.push( new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			this.rtBloomVertical.push( new GLP.GLPowerFrameBuffer( gl ).setTexture( [
 				power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
 			] ) );
 
-			rtBloomHorizonal.push( new GLP.GLPowerFrameBuffer( gl ).setTexture( [
+			this.rtBloomHorizonal.push( new GLP.GLPowerFrameBuffer( gl ).setTexture( [
 				power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
 			] ) );
 
 		}
 
 		this.bloomBright = new PostProcessPass( {
-			input: rt1.textures,
+			input: this.rt1.textures,
 			frag: bloomBrightFrag,
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
 				threshold: {
@@ -260,22 +297,22 @@ export class MainCamera extends Entity {
 					value: 0.5,
 				},
 			} ),
-			renderTarget: rt2
+			renderTarget: this.rt2
 		} );
 
 		this.bloomBlur = [];
 
 		// bloom blur
 
-		let bloomInput: GLP.GLPowerTexture[] = rt2.textures;
+		let bloomInput: GLP.GLPowerTexture[] = this.rt2.textures;
 
-		for ( let i = 0; i < bloomRenderCount; i ++ ) {
+		for ( let i = 0; i < this.bloomRenderCount; i ++ ) {
 
-			const rtVertical = rtBloomVertical[ i ];
-			const rtHorizonal = rtBloomHorizonal[ i ];
+			const rtVertical = this.rtBloomVertical[ i ];
+			const rtHorizonal = this.rtBloomHorizonal[ i ];
 
 			const resolution = new GLP.Vector();
-			resolutionBloom.push( resolution );
+			this.resolutionBloom.push( resolution );
 
 			this.bloomBlur.push( new PostProcessPass( {
 				input: bloomInput,
@@ -288,7 +325,7 @@ export class MainCamera extends Entity {
 					},
 					uWeights: {
 						type: '1fv',
-						value: this.guassWeight( bloomRenderCount )
+						value: this.guassWeight( this.bloomRenderCount )
 					},
 					uResolution: {
 						type: '2fv',
@@ -296,7 +333,7 @@ export class MainCamera extends Entity {
 					}
 				},
 				defines: {
-					GAUSS_WEIGHTS: bloomRenderCount.toString()
+					GAUSS_WEIGHTS: this.bloomRenderCount.toString()
 				}
 			} ) );
 
@@ -311,7 +348,7 @@ export class MainCamera extends Entity {
 					},
 					uWeights: {
 						type: '1fv',
-						value: this.guassWeight( bloomRenderCount )
+						value: this.guassWeight( this.bloomRenderCount )
 					},
 					uResolution: {
 						type: '2fv',
@@ -319,7 +356,7 @@ export class MainCamera extends Entity {
 					}
 				},
 				defines: {
-					GAUSS_WEIGHTS: bloomRenderCount.toString()
+					GAUSS_WEIGHTS: this.bloomRenderCount.toString()
 				} } ) );
 
 			bloomInput = rtHorizonal.textures;
@@ -329,16 +366,16 @@ export class MainCamera extends Entity {
 		// composite
 
 		this.composite = new PostProcessPass( {
-			input: [ rt1.textures[ 0 ] ],
+			input: [ this.rt1.textures[ 0 ] ],
 			frag: compositeFrag,
 			uniforms: GLP.UniformsUtils.merge( this.commonUniforms, {
 				uBloomTexture: {
-					value: rtBloomHorizonal.map( rt => rt.textures[ 0 ] ),
+					value: this.rtBloomHorizonal.map( rt => rt.textures[ 0 ] ),
 					type: '1iv'
 				},
 			} ),
 			defines: {
-				BLOOM_COUNT: bloomRenderCount.toString()
+				BLOOM_COUNT: this.bloomRenderCount.toString()
 			},
 			renderTarget: null
 		} );
@@ -358,49 +395,6 @@ export class MainCamera extends Entity {
 				this.composite,
 			] } )
 		);
-
-		// events
-
-		this.on( "resize", ( e: EntityResizeEvent ) => {
-
-			resolution.copy( e.resolution );
-			resolutionInv.set( 1.0 / e.resolution.x, 1.0 / e.resolution.y, 0.0, 0.0 );
-
-			const resolutionHalf = resolution.clone().divide( 2 );
-			resolutionHalf.x = Math.max( Math.floor( resolutionHalf.x ), 1.0 );
-			resolutionHalf.y = Math.max( Math.floor( resolutionHalf.y ), 1.0 );
-
-			rt1.setSize( e.resolution );
-			rt2.setSize( e.resolution );
-			rt3.setSize( e.resolution );
-
-			this.cameraComponent.aspect = e.resolution.x / e.resolution.y;
-			this.cameraComponent.updateProjectionMatrix();
-
-			let scale = 2;
-
-			for ( let i = 0; i < bloomRenderCount; i ++ ) {
-
-				resolutionBloom[ i ].copy( e.resolution ).multiply( 1.0 / scale );
-
-				rtBloomHorizonal[ i ].setSize( resolutionBloom[ i ] );
-				rtBloomVertical[ i ].setSize( resolutionBloom[ i ] );
-
-				scale *= 2.0;
-
-			}
-
-			this.rtLightShaft1.setSize( e.resolution );
-			this.rtLightShaft2.setSize( e.resolution );
-
-			this.rtSSR1.setSize( resolutionHalf );
-			this.rtSSR2.setSize( resolutionHalf );
-
-			this.rtDofCoc.setSize( resolutionHalf );
-			this.rtDofBokeh.setSize( resolutionHalf );
-			this.rtDofComposite.setSize( resolution );
-
-		} );
 
 	}
 
@@ -477,6 +471,42 @@ export class MainCamera extends Entity {
 
 	protected resizeImpl( e: ComponentResizeEvent ): void {
 
+		this.resolution.copy( e.resolution );
+		this.resolutionInv.set( 1.0 / e.resolution.x, 1.0 / e.resolution.y, 0.0, 0.0 );
+
+		const resolutionHalf = this.resolution.clone().divide( 2 );
+		resolutionHalf.x = Math.max( Math.floor( resolutionHalf.x ), 1.0 );
+		resolutionHalf.y = Math.max( Math.floor( resolutionHalf.y ), 1.0 );
+
+		this.rt1.setSize( e.resolution );
+		this.rt2.setSize( e.resolution );
+		this.rt3.setSize( e.resolution );
+
+		this.cameraComponent.aspect = e.resolution.x / e.resolution.y;
+		this.cameraComponent.updateProjectionMatrix();
+
+		let scale = 2;
+
+		for ( let i = 0; i < this.bloomRenderCount; i ++ ) {
+
+			this.resolutionBloom[ i ].copy( e.resolution ).multiply( 1.0 / scale );
+
+			this.rtBloomHorizonal[ i ].setSize( this.resolutionBloom[ i ] );
+			this.rtBloomVertical[ i ].setSize( this.resolutionBloom[ i ] );
+
+			scale *= 2.0;
+
+		}
+
+		this.rtLightShaft1.setSize( e.resolution );
+		this.rtLightShaft2.setSize( e.resolution );
+
+		this.rtSSR1.setSize( resolutionHalf );
+		this.rtSSR2.setSize( resolutionHalf );
+
+		this.rtDofCoc.setSize( resolutionHalf );
+		this.rtDofBokeh.setSize( resolutionHalf );
+		this.rtDofComposite.setSize( this.resolution );
 
 	}
 

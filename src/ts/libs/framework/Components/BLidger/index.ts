@@ -24,21 +24,30 @@ export class BLidger extends Component {
 
 	}
 
-	public onSetEntity( entity: Entity ): void {
+	public setEntityImpl( entity: Entity ): void {
 
 		entity.name = this.param.name;
 
 		entity.position.copy( this.param.position );
 
-		entity.rotation.copy( this.param.rotation );
-		entity.rotation.x += this.rotationOffsetX;
-		entity.rotation.order = "YZX";
+		entity.quaternion.setFromEuler( {
+			x: this.param.rotation.x + this.rotationOffsetX,
+			y: this.param.rotation.y,
+			z: this.param.rotation.z,
+		}, 'YZX' );
 
 		entity.scale.copy( this.param.scale );
 
 	}
 
 	protected updateImpl( event: ComponentUpdateEvent ): void {
+
+	}
+
+	public onCompleteSyncScene() {
+
+		console.log( "aaaa" );
+
 
 	}
 

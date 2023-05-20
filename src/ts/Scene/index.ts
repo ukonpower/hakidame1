@@ -94,6 +94,8 @@ export class Scene extends GLP.EventEmitter {
 			deltaTime: this.deltaTime,
 		} );
 
+		this.root.noticeRecursive( "sceneUpdated", this.root );
+
 		this.emit( "update" );
 
 		this.renderer.render( renderStack );
