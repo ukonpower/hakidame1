@@ -64,6 +64,8 @@ export class MainCamera extends Entity {
 	// dof
 
 	private dofParams: GLP.Vector;
+	private dofTarget: Entity | null;
+
 	public dofCoc: PostProcessPass;
 	public dofBokeh: PostProcessPass;
 	public dofComposite: PostProcessPass;
@@ -81,6 +83,11 @@ export class MainCamera extends Entity {
 	private resolutionInv: GLP.Vector;
 	private resolutionBloom: GLP.Vector[];
 
+	// tmps
+
+	private tmpVector1: GLP.Vector;
+	private tmpVector2: GLP.Vector;
+
 	constructor( param: RenderCameraParam ) {
 
 		super();
@@ -91,12 +98,6 @@ export class MainCamera extends Entity {
 		this.addComponent( 'orbitControls', new OrbitControls( canvas ) );
 
 		const lookAt = this.addComponent( 'lookAt', new LookAt() );
-
-		this.on( 'notice/sceneCreated', ( root: Entity ) => {
-
-			lookAt.setTarget( root.getEntityByName( "CameraTarget" ) );
-
-		} );
 
 		// resolution
 
@@ -218,16 +219,8 @@ export class MainCamera extends Entity {
 			power.createTexture().setting( { magFilter: gl.LINEAR, minFilter: gl.LINEAR } ),
 		] );
 
-		const flocalLength = 50;
-		const focusDistance = 13;
-		const aperture = 20.0;
-		const F = flocalLength / 1000;
-		const A = flocalLength / aperture;
-		const P = focusDistance;
-		const maxCoc = ( A * F ) / ( P - F );
-		const rcpMaxCoC = 1.0 / maxCoc;
-
-		this.dofParams = new GLP.Vector( focusDistance, maxCoc, rcpMaxCoC, 0.05 );
+		this.dofTarget = null;
+		this.dofParams = new GLP.Vector( 10, 0.05, 20, 0.05 );
 
 		this.dofCoc = new PostProcessPass( {
 			input: [ this.rt1.textures[ 0 ], param.renderTarget.gBuffer.depthTexture ],
@@ -396,6 +389,43 @@ export class MainCamera extends Entity {
 			] } )
 		);
 
+		// events
+
+		this.on( 'notice/sceneCreated', ( root: Entity ) => {
+
+			lookAt.setTarget( root.getEntityByName( "CameraTarget" ) || null );
+			this.dofTarget = root.getEntityByName( 'CameraTargetDof' ) || null;
+
+		} );
+
+		this.on( "notice/sceneUpdated", () => {
+
+			// dof params
+
+			this.matrixWorld.decompose( this.tmpVector1 );
+
+			if ( this.dofTarget ) {
+
+				this.dofTarget.matrixWorld.decompose( this.tmpVector2 );
+
+			}
+
+			const fov = this.cameraComponent.fov;
+			const focusDistance = this.tmpVector1.sub( this.tmpVector2 ).length();
+			const kFilmHeight = 0.036;
+			const flocalLength = 0.5 * kFilmHeight / Math.tan( 0.5 * ( fov / 180 * Math.PI ) );
+			const maxCoc = 1 / this.rtDofBokeh.size.y * 6.0;
+			const rcpMaxCoC = 1.0 / maxCoc;
+			const coeff = flocalLength * flocalLength / ( 1.4 * ( focusDistance - flocalLength ) * kFilmHeight * 2 ) * 1.5;
+			this.dofParams.set( focusDistance, maxCoc, rcpMaxCoC, coeff );
+
+		} );
+
+		// tmps
+
+		this.tmpVector1 = new GLP.Vector();
+		this.tmpVector2 = new GLP.Vector();
+
 	}
 
 	private guassWeight( num: number ) {
@@ -435,17 +465,6 @@ export class MainCamera extends Entity {
 
 	protected updateImpl( event: ComponentUpdateEvent ): void {
 
-		// dof
-
-		const fov = this.cameraComponent.fov;
-
-		const focusDistance = this.matrixWorld.elm[ 14 ];
-		const kFilmHeight = 0.036;
-		const flocalLength = 0.5 * kFilmHeight / Math.tan( 0.5 * ( fov / 180 * Math.PI ) );
-		const maxCoc = 1 / this.rtDofBokeh.size.y * 6.0;
-		const rcpMaxCoC = 1.0 / maxCoc;
-		const coeff = flocalLength * flocalLength / ( 1.4 * ( focusDistance - flocalLength ) * kFilmHeight * 2 ) * 1.5;
-		this.dofParams.set( focusDistance, maxCoc, rcpMaxCoC, coeff );
 
 		// light shaft swap
 

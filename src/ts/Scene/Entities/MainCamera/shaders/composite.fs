@@ -34,10 +34,10 @@ void main( void ) {
 	col = texture( sampler0, vUv ).xyz;
 
 	#pragma loop_start 4
-		col += texture( uBloomTexture[ LOOP_INDEX ], uv ).xyz * ( 0.5 + float(LOOP_INDEX) * 0.5 ) * 0.2;
+		col += texture( uBloomTexture[ LOOP_INDEX ], uv ).xyz * ( 0.5 + float(LOOP_INDEX) * 0.5 ) * 0.0;
 	#pragma loop_end
 
-	col *= smoothstep( 0.9, 0.3, len );
+	col *= smoothstep( 1.0, 0.4, len );
 
 	outColor = vec4( col, 1.0 );
 

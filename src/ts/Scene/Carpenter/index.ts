@@ -80,7 +80,7 @@ export class Carpenter extends GLP.EventEmitter {
 
 				const blidge = entity.getComponent<BLidger>( "blidger" );
 
-				if ( blidge && node.type != blidge.param.type ) {
+				if ( blidge && node.type != blidge.node.type ) {
 
 					const geoComp = entity.removeComponent( 'geometry' );
 					geoComp && geoComp.dispose();

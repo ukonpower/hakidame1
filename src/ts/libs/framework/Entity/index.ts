@@ -234,7 +234,7 @@ export class Entity extends GLP.EventEmitter {
 		API
 	-------------------------------*/
 
-	public getEntityByName( name: string ) : Entity | null {
+	public getEntityByName( name: string ) : Entity | undefined {
 
 		if ( this.name == name ) {
 
@@ -256,7 +256,7 @@ export class Entity extends GLP.EventEmitter {
 
 		}
 
-		return null;
+		return undefined;
 
 	}
 

@@ -55,34 +55,12 @@ class App {
 	private resize() {
 
 		const scale = 1.0;
-		// const width = 1920 * scale, height = 1080 * scale;
 		const width = window.innerWidth * scale, height = window.innerHeight * scale;
-		const aspect = width / height;
-
-		const wrapperWidth = this.canvasWrap.clientWidth;
-		const wrapperHeight = this.canvasWrap.clientHeight;
-		const wrapperAspect = wrapperWidth / wrapperHeight;
-
-		let canvasStyleWidth = 0;
-		let canvasStyleHeight = 0;
-
-		if ( wrapperAspect > aspect ) {
-
-			canvasStyleHeight = wrapperHeight;
-			canvasStyleWidth = canvasStyleHeight * aspect;
-
-		} else {
-
-			canvasStyleWidth = wrapperWidth;
-			canvasStyleHeight = canvasStyleWidth / aspect;
-
-		}
-
-		this.canvas.style.width = canvasStyleWidth + 'px';
-		this.canvas.style.height = canvasStyleHeight + 'px';
 
 		this.canvas.width = width;
 		this.canvas.height = height;
+		this.canvas.style.width = width + "";
+		this.canvas.style.height = height + "";
 
 		this.scene.resize( new GLP.Vector( this.canvas.width, this.canvas.height ) );
 
