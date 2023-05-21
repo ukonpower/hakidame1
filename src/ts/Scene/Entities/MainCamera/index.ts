@@ -416,7 +416,7 @@ export class MainCamera extends Entity {
 			const flocalLength = 0.5 * kFilmHeight / Math.tan( 0.5 * ( fov / 180 * Math.PI ) );
 			const maxCoc = 1 / this.rtDofBokeh.size.y * 6.0;
 			const rcpMaxCoC = 1.0 / maxCoc;
-			const coeff = flocalLength * flocalLength / ( 1.4 * ( focusDistance - flocalLength ) * kFilmHeight * 2 ) * 1.5;
+			const coeff = flocalLength * flocalLength / ( 1.4 * ( focusDistance - flocalLength ) * kFilmHeight * 2 ) * 2.0;
 			this.dofParams.set( focusDistance, maxCoc, rcpMaxCoC, coeff );
 
 		} );

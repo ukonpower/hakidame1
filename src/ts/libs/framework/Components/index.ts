@@ -34,7 +34,7 @@ export class Component extends GLP.EventEmitter {
 
 	public setEntity( entity: Entity | null ) {
 
-		const beforeEntity = entity;
+		const beforeEntity = this.entity;
 
 		this.entity = entity;
 

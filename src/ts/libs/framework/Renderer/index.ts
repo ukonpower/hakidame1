@@ -214,13 +214,20 @@ export class Renderer extends Entity {
 				cameraMatrixWorld: cameraEntity.matrixWorld
 			};
 
+			gl.disable( gl.BLEND );
+
 			this.renderCamera( "deferred", stack.deferred, cameraComponent.renderTarget.gBuffer, renderOption );
 
 			this.deferredPostProcess.setRenderTarget( cameraComponent.renderTarget );
 
 			this.renderPostProcess( this.deferredPostProcess, renderOption, );
 
+			gl.enable( gl.BLEND );
+			gl.blendFunc( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA );
+
 			this.renderCamera( "forward", stack.forward, cameraComponent.renderTarget.forwardBuffer, { ...renderOption, uniforms: { uDeferredTexture: { value: cameraComponent.renderTarget.deferredBuffer.textures[ 1 ], type: '1i' } } }, false );
+
+			gl.disable( gl.BLEND );
 
 			const postProcess = cameraEntity.getComponent<PostProcess>( 'postprocess' );
 
@@ -650,11 +657,11 @@ export class Renderer extends Entity {
 
 					if ( vao.indexBuffer ) {
 
-						gl.drawElementsInstanced( gl.TRIANGLES, vao.indexCount, gl.UNSIGNED_SHORT, 0, vao.instanceCount );
+						gl.drawElementsInstanced( material.drawType, vao.indexCount, gl.UNSIGNED_SHORT, 0, vao.instanceCount );
 
 					} else {
 
-						gl.drawArraysInstanced( gl.TRIANGLES, 0, vao.vertCount, vao.instanceCount );
+						gl.drawArraysInstanced( material.drawType, 0, vao.vertCount, vao.instanceCount );
 
 					}
 
@@ -662,11 +669,11 @@ export class Renderer extends Entity {
 
 					if ( vao.indexBuffer ) {
 
-						gl.drawElements( gl.TRIANGLES, vao.indexCount, gl.UNSIGNED_SHORT, 0 );
+						gl.drawElements( material.drawType, vao.indexCount, gl.UNSIGNED_SHORT, 0 );
 
 					} else {
 
-						gl.drawArrays( gl.TRIANGLES, 0, vao.vertCount );
+						gl.drawArrays( material.drawType, 0, vao.vertCount );
 
 					}
 

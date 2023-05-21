@@ -1,5 +1,5 @@
 import * as GLP from 'glpower';
-import { Material, Material } from '../Components/Material';
+import { Material } from '../Components/Material';
 import { BuiltInComponents, Component, ComponentResizeEvent, ComponentUpdateEvent } from '../Components';
 import { Light } from '../Components/Light';
 import { RenderStack } from '../Renderer';
@@ -205,6 +205,14 @@ export class Entity extends GLP.EventEmitter {
 	-------------------------------*/
 
 	public addComponent<T extends Component>( name: BuiltInComponents, component: T ) {
+
+		const prevComponent = this.components.get( name );
+
+		if ( prevComponent ) {
+
+			prevComponent.setEntity( null );
+
+		}
 
 		component.setEntity( this );
 

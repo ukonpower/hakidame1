@@ -26,7 +26,7 @@ void main( void ) {
 	float f = fresnel( dot( dir, gCol1.xyz ) );
 
 	outColor = vec4( texture( sampler2, vUv ).xyz, 1.0 );
-	outColor += texture( uLightShaftTexture, vUv ) * 0.3;
+	outColor += texture( uLightShaftTexture, vUv ) * 0.2;
 	outColor += texture( uSSRTexture, vUv ) * 0.3 * f;
 
 }

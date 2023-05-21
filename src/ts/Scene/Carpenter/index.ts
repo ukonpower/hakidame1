@@ -1,18 +1,11 @@
 import * as GLP from 'glpower';
 import { blidge } from '~/ts/Globals';
-import { Material } from '~/ts/libs/framework/Components/Material';
 import { Entity } from '~/ts/libs/framework/Entity';
-
-import basicVert from './shaders/basic.vs';
-import basicFrag from './shaders/basic.fs';
-
-import { CubeGeometry } from '~/ts/libs/framework/Components/Geometry/CubeGeometry';
 import { BLidger } from '~/ts/libs/framework/Components/BLidger';
-import { Light } from '~/ts/libs/framework/Components/Light';
 import { RenderCamera } from '~/ts/libs/framework/Components/Camera/RenderCamera';
 
 import SceneData from './scene/scene.json';
-import { SphereGeometry } from '~/ts/libs/framework/Components/Geometry/SphereGeometry';
+import { router } from './router';
 
 export class Carpenter extends GLP.EventEmitter {
 
@@ -64,8 +57,6 @@ export class Carpenter extends GLP.EventEmitter {
 
 		}
 
-
-
 	}
 
 	private onSyncScene( blidge: GLP.BLidge ) {
@@ -74,58 +65,12 @@ export class Carpenter extends GLP.EventEmitter {
 
 		const _ = ( node: GLP.BLidgeNode ): Entity => {
 
-			const entity: Entity = node.type == 'camera' ? this.camera : ( this.entities.get( node.name ) || new Entity() );
+			const entity: Entity = node.type == 'camera' ? this.camera : ( this.entities.get( node.name ) || router( node ) );
 
-			if ( entity ) {
-
-				const blidge = entity.getComponent<BLidger>( "blidger" );
-
-				if ( blidge && node.type != blidge.node.type ) {
-
-					const geoComp = entity.removeComponent( 'geometry' );
-					geoComp && geoComp.dispose();
-
-					const matComp = entity.removeComponent( 'material' );
-					matComp && matComp.dispose();
-
-				}
-
-			}
-
-			if ( node.type == 'cube' ) {
-
-				entity.addComponent( 'geometry', new CubeGeometry( 2.0, 2.0, 2.0 ) );
-				entity.addComponent( "material", new Material( {
-					type: [ "deferred", "shadowMap" ],
-					vert: basicVert,
-					frag: basicFrag,
-				} ) );
-
-			} else if ( node.type == 'sphere' ) {
-
-				entity.addComponent( 'geometry', new SphereGeometry() );
-				entity.addComponent( "material", new Material( {
-					type: [ "deferred", "shadowMap" ],
-					vert: basicVert,
-					frag: basicFrag,
-				} ) );
-
-			} else if ( node.type == "light" ) {
-
-				const lightParam = node.param as GLP.BLidgeLightParam;
-
-				entity.addComponent( 'light', new Light( {
-					...lightParam,
-					color: new GLP.Vector().copy( lightParam.color ),
-					useShadowMap: true,
-				} ) );
-
-			} else if ( node.type == 'camera' ) {
+			if ( node.type == 'camera' ) {
 
 				const cameraParam = node.param as GLP.BLidgeCameraParam;
-
 				const renderCamera = this.camera.getComponent<RenderCamera>( "camera" )!;
-
 				renderCamera.fov = cameraParam.fov;
 				renderCamera.updateProjectionMatrix();
 

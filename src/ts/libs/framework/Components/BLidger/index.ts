@@ -3,6 +3,10 @@ import * as GLP from 'glpower';
 import { Component, ComponentUpdateEvent } from "..";
 import { Entity } from '../../Entity';
 import { blidge } from '~/ts/Globals';
+import { Light } from '../Light';
+import { CubeGeometry } from '../Geometry/CubeGeometry';
+import { SphereGeometry } from '../Geometry/SphereGeometry';
+import { Material } from '../Material';
 
 export class BLidger extends Component {
 
@@ -74,6 +78,8 @@ export class BLidger extends Component {
 
 			entity.name = this.node.name;
 
+			// transform
+
 			entity.position.copy( this.node.position );
 
 			entity.quaternion.setFromEuler( {
@@ -83,6 +89,42 @@ export class BLidger extends Component {
 			}, 'YZX' );
 
 			entity.scale.copy( this.node.scale );
+
+			// geometry
+
+			if ( this.node.type == 'cube' ) {
+
+				const cubeParam = this.node.param as any;
+
+				entity.addComponent( 'geometry', new CubeGeometry( cubeParam.x, cubeParam.y, cubeParam.z ) );
+
+			} else if ( this.node.type == 'sphere' ) {
+
+				entity.addComponent( 'geometry', new SphereGeometry() );
+
+			}
+
+			// base material
+
+			if ( entity.getComponent( "geometry" ) && ! entity.getComponent( "material" ) ) {
+
+				entity.addComponent( "material", new Material( { type: [ "deferred", "shadowMap" ] } ) );
+
+			}
+
+			// light
+
+			if ( this.node.type == "light" ) {
+
+				const lightParam = this.node.param as GLP.BLidgeLightParam;
+
+				entity.addComponent( 'light', new Light( {
+					...lightParam,
+					color: new GLP.Vector().copy( lightParam.color ),
+					useShadowMap: true,
+				} ) );
+
+			}
 
 		}
 
