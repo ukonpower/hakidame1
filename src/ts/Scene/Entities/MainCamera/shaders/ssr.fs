@@ -1,7 +1,7 @@
 #include <common>
 #include <packing>
 #include <light>
-#include <random>
+#include <noise>
 
 // uniforms
 

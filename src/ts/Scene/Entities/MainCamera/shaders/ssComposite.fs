@@ -2,7 +2,7 @@
 #include <packing>
 #include <light>
 #include <re>
-#include <random>
+#include <noise>
 
 uniform sampler2D sampler0;
 uniform sampler2D sampler1;

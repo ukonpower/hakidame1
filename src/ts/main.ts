@@ -59,8 +59,8 @@ class App {
 
 		this.canvas.width = width;
 		this.canvas.height = height;
-		this.canvas.style.width = width + "";
-		this.canvas.style.height = height + "";
+		this.canvas.style.width = width / scale + "";
+		this.canvas.style.height = height / scale + "";
 
 		this.scene.resize( new GLP.Vector( this.canvas.width, this.canvas.height ) );
 

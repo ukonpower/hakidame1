@@ -1,7 +1,7 @@
 import common from './shaderModules/common.module.glsl';
 import packing from './shaderModules/packing.module.glsl';
 import sdf from './shaderModules/sdf.module.glsl';
-import random from './shaderModules/random.module.glsl';
+import noise from './shaderModules/noise.module.glsl';
 import rotate from './shaderModules/rotate.module.glsl';
 import noise4D from './shaderModules/noise4D.module.glsl';
 import light from './shaderModules/light.module.glsl';
@@ -59,7 +59,7 @@ export const shaderInclude = ( shader: string ) => {
 		"packing": packing,
 		"sdf": sdf,
 		"rotate": rotate,
-		"random": random,
+		"noise": noise,
 		"noise4D": noise4D,
 		"light": light,
 		"re": re,
