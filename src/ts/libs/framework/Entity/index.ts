@@ -5,6 +5,7 @@ import { Light } from '../Components/Light';
 import { RenderStack } from '../Renderer';
 import { Camera } from '../Components/Camera';
 import { Geometry } from '../Components/Geometry';
+import { GPUCompute } from '../Components/GPUCompute';
 
 export type EntityUpdateEvent = {
 	time: number,
@@ -75,6 +76,7 @@ export class Entity extends GLP.EventEmitter {
 			forward: [],
 			shadowMap: [],
 			envMap: [],
+			gpuCompute: [],
 		};
 
 		if ( ! this.visible ) return event.renderStack;
@@ -104,6 +106,14 @@ export class Entity extends GLP.EventEmitter {
 		if ( light ) {
 
 			event.renderStack.light.push( this );
+
+		}
+
+		const gpuCompute = this.getComponent<GPUCompute>( "gpuCompute" );
+
+		if ( gpuCompute ) {
+
+			event.renderStack.gpuCompute.push( this );
 
 		}
 

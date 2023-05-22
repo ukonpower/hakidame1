@@ -2,10 +2,9 @@ import * as GLP from 'glpower';
 
 import { Material, MaterialParam } from '../Material';
 
-export interface PostProcessPassParam extends Omit<MaterialParam, 'vert'> {
+export interface PostProcessPassParam extends MaterialParam{
 	input?: ( GLP.GLPowerTexture | null )[],
 	renderTarget: GLP.GLPowerFrameBuffer | null,
-	vert?: string,
 	clearColor?: GLP.Vector;
 	clearDepth?: number;
 }
@@ -31,6 +30,9 @@ export class PostProcessPass extends Material {
 		this.clearDepth = param.clearDepth ?? null;
 		this.depthTest = param.depthTest !== undefined ? param.depthTest : false;
 
+	}
+
+	public onAfterRender() {
 	}
 
 }

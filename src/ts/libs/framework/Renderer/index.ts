@@ -11,6 +11,7 @@ import { PostProcess } from '../Components/PostProcess';
 import { RenderCamera } from '../Components/Camera/RenderCamera';
 import { Light, LightType } from '../Components/Light';
 import { DeferredPostProcess } from './DeferredPostProcess';
+import { GPUCompute } from '../Components/GPUCompute';
 
 export type RenderStack = {
 	light: Entity[];
@@ -19,6 +20,7 @@ export type RenderStack = {
 	shadowMap: Entity[];
 	deferred: Entity[];
 	forward: Entity[];
+	gpuCompute: Entity[];
 }
 
 type LightInfo = {
@@ -171,6 +173,16 @@ export class Renderer extends Entity {
 				break;
 
 			}
+
+		}
+
+		// gpu
+
+		for ( let i = 0; i < stack.gpuCompute.length; i ++ ) {
+
+			const gpu = stack.gpuCompute[ i ].getComponent<GPUCompute>( 'gpuCompute' )!;
+
+			this.renderPostProcess( gpu );
 
 		}
 
@@ -387,6 +399,8 @@ export class Renderer extends Entity {
 			}
 
 			this.draw( "id", "postprocess", this.quad, pass, matrix );
+
+			pass.onAfterRender();
 
 		}
 

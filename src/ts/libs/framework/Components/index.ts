@@ -18,6 +18,8 @@ export type BuiltInComponents =
 	'geometry' |
 	'light' |
 	'blidger' |
+	'postprocess' |
+	'gpuCompute' |
 ( string & {} );
 
 export class Component extends GLP.EventEmitter {
@@ -62,11 +64,9 @@ export class Component extends GLP.EventEmitter {
 
 	}
 
-	protected setEntityImpl( entity: Entity | null, prevEntity: Entity | null ) {
-	}
+	protected setEntityImpl( entity: Entity | null, prevEntity: Entity | null ) {}
 
-	protected updateImpl( event: ComponentUpdateEvent ) {
-	}
+	protected updateImpl( event: ComponentUpdateEvent ) {}
 
 	protected resizeImpl( event: ComponentResizeEvent ) {}
 
