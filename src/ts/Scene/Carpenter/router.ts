@@ -18,7 +18,7 @@ export const router = ( node: GLP.BLidgeNode ) => {
 
 	} else if ( node.name == "FluidParticles" ) {
 
-		return new FluidParticles();
+		// return new FluidParticles();
 
 	} else if ( node.name == "Floor" ) {
 

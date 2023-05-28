@@ -19,6 +19,7 @@ import dofBokeh from './shaders/dofBokeh.fs';
 import ssCompositeFrag from './shaders/ssComposite.fs';
 import compositeFrag from './shaders/composite.fs';
 import { LookAt } from '~/ts/libs/framework/Components/LookAt';
+import { RotateViewer } from '~/ts/libs/framework/Components/RotateViewer';
 
 export class MainCamera extends Entity {
 
@@ -98,6 +99,8 @@ export class MainCamera extends Entity {
 		this.addComponent( 'orbitControls', new OrbitControls( canvas ) );
 
 		const lookAt = this.addComponent( 'lookAt', new LookAt() );
+
+		this.addComponent( 'rotateViewer', new RotateViewer() );
 
 		// resolution
 
@@ -372,6 +375,9 @@ export class MainCamera extends Entity {
 			},
 			renderTarget: null
 		} );
+
+		// DEBUG
+		// this.composite.input = [ param.renderTarget.deferredBuffer.textures[ 0 ] ];
 
 		this.addComponent( "postprocess", new PostProcess( {
 			input: param.renderTarget.gBuffer.textures,

@@ -54,8 +54,8 @@ class App {
 
 	private resize() {
 
-		const scale = 1.0;
-		const width = window.innerWidth * scale, height = window.innerHeight * scale;
+		const scale = 0.5;
+		const width = window.innerWidth * scale, height = window.innerHeight * scale * 0.7;
 
 		this.canvas.width = width;
 		this.canvas.height = height;

@@ -13,24 +13,33 @@ uniform float uTimeSeq;
 
 vec2 D( vec3 p ) {
 
-	vec3 pp = p * 0.5;
+	vec3 pp = p;
 
-	vec2 d = vec2( sdSphere( pp, 0.03 ), 0.0 );
-	float b = uTime;
+	// pp.xz *= rotate( uTime * 0.1 );
+
+	vec2 d = vec2( 99999.0, 0.0 );
+
+	// vec2 d = vec2( sdSphere( pp, 0.03 ), 0.0 );
+	float t = uTime * 0.5;
 	
-	for( int i = 0; i < 8; i++ ) {
+	float rot = floor( t ) + ( 1.0 - exp( fract( t ) * - 5.0 ));
+	float rot2 = floor( t * 0.5 ) + ( 1.0 - exp( fract( t * 0.5 ) * - 20.0 ));
+	
+	vec3 boxSize = vec3( 0.3 );
+	
+	for( int i = 0; i < 6; i++ ) {
 
 		pp.x = abs( pp.x );
+		pp.x -= boxSize.x * 2.0;
+		pp.xz *= rotate( rot * PI / 2.0 );
 
-		pp.xy *= rotate( b * PI  / 4.0);
-		pp.xz *= rotate( b * 0.1);
+		// pp.y = abs( pp.y );
+		// pp.y -= boxSize.y;
+		pp.zy *= rotate( rot * PI / 2.0 );
 
 	}
 
-	pp.y = abs( pp.y );
-	pp.y -= 0.03;
-
-	d = add( d, vec2( sdPyramid( pp, 0.7 ), 1.0 ) );
+	d = add( d, vec2( sdBox( pp, boxSize ), 1.0 ) );
 	
 	return d;
 
@@ -57,7 +66,7 @@ void main( void ) {
 
 	vec3 normal;
 	
-	for( int i = 0; i < 128; i++ ) { 
+	for( int i = 0; i < 64; i++ ) { 
 
 		dist = D( rayPos );		
 		rayPos += dist.x * rayDir;
@@ -75,11 +84,7 @@ void main( void ) {
 
 	if( dist.y == 1.0 ) {
 		
-		vec3 n2 = N( rayPos, 0.01 );
-
-		outEmission += length(n2 - normal) * 0.3;
-
-		outRoughness = 0.3;
+		outRoughness = 1.0;
 		outMetalic = 0.0;
 		outColor.xyz = vec3( 1.0, 1.0, 1.0 );
 		
