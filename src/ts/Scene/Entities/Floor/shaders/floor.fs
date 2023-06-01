@@ -43,7 +43,7 @@ void main( void ) {
 
 	vec3 normal;
 	
-	for( int i = 0; i < 64; i++ ) { 
+	for( int i = 0; i < 16; i++ ) { 
 
 		dist = D( rayPos );		
 		rayPos += dist.x * rayDir;
@@ -56,6 +56,8 @@ void main( void ) {
 			break;
 
 		}
+
+		if( dist.x < -1.0 ) break;
 		
 	}
 

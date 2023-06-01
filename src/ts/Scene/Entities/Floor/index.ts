@@ -13,6 +13,7 @@ export class Floor extends Entity {
 		super();
 
 		const mat = this.addComponent( "material", new Material( {
+			name: "floor",
 			type: [ "deferred", "shadowMap" ],
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time ),
 			frag: hotGet( 'floorFrag', floorFrag )

@@ -55,6 +55,7 @@ float fbm (in vec3 p) {
         value += amplitude * noise(p);
         p *= 2.;
         amplitude *= .5;
+        if( value < -1.0 ) break;
     }
     return value;
 }

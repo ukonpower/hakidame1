@@ -3,9 +3,8 @@ import * as GLP from 'glpower';
 import { Material } from '~/ts/libs/framework/Components/Material';
 import { Entity } from '~/ts/libs/framework/Entity';
 import { hotGet, hotUpdate } from '~/ts/libs/framework/Utils/Hot';
-import { gl, globalUniforms } from '~/ts/Globals';
+import { globalUniforms } from '~/ts/Globals';
 
-import { Geometry } from '~/ts/libs/framework/Components/Geometry';
 import { GPUCompute } from '~/ts/libs/framework/Components/GPUCompute';
 import { GPUComputePass } from '~/ts/libs/framework/Components/GPUComputePass';
 
@@ -75,6 +74,7 @@ export class FluidParticles extends Entity {
 		// material
 
 		const mat = this.addComponent( "material", new Material( {
+			name: "fluid",
 			type: [ "deferred", 'shadowMap' ],
 			uniforms: GLP.UniformsUtils.merge( globalUniforms.time, {
 				uRange: {

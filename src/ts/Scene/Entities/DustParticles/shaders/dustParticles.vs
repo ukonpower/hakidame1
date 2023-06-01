@@ -18,6 +18,6 @@ void main( void ) {
 	#include <vert_out>
 
 	vAlpha = smoothstep( -40.0, 0.0, mvPosition.z);
-	gl_PointSize = 0.5 + size * 7.0 * vAlpha;
+	gl_PointSize = 0.5 + size * 5.0 * vAlpha;
 	
 }

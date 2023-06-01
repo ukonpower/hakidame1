@@ -13,6 +13,7 @@ import basicFrag from './shaders/basic.fs';
 import { gl } from '~/ts/Globals';
 
 export type MaterialParam = {
+	name?: string,
 	type?: MaterialRenderType[];
 	frag?: string;
 	vert?: string;
@@ -26,6 +27,7 @@ export type MaterialParam = {
 
 export class Material extends Component {
 
+	public name: string;
 	public type: MaterialRenderType[];
 
 	public vert: string;
@@ -45,6 +47,7 @@ export class Material extends Component {
 
 		super();
 
+		this.name = opt.name || '';
 		this.type = opt.type || [];
 
 		this.visibilityFlag = {
