@@ -20,9 +20,6 @@ export default defineConfig( {
 			input: {
 				index: path.resolve( __dirname, 'src/index.html' ),
 			},
-			output: {
-				dir: './public',
-			}
 		}
 	},
 	resolve: {
