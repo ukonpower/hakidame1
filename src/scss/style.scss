@@ -48,7 +48,7 @@ body {
 	position: relative;
 	width: 100%;
 	height: 100%;
-	background: #000;
+	background: #050505;
 }
 
 canvas {
@@ -62,37 +62,81 @@ canvas {
 
 h1 {
 	position: absolute;
-	left: 1%;
-	top: 7%;
-	font-size: 22vmin;
+	top: 7vh;
+	font-size: 21vmin;
+	user-select: none;
 }
 
 .text {
 	position: absolute;
 	text-align: right;
 	right: 0px;
-	bottom: 10vh;
+	bottom: 0.5vh;
 	font-size: 15vmin;
 	max-width: 100%;
 	mix-blend-mode: difference;
 	line-height: 0.8em;
-}
-
-.back {
-	position: absolute;
-	left: 0;
-	bottom: 0;
-	font-size: 8vmin;
-	color: #fff;
+	user-select: none;
+	a {
+		font-size: 12vmin;
+		line-height: 1.2em;
+		transition: opacity 0.5s;
+		&:hover {
+			opacity: 0.6;
+		}
+	}
 }
 
 .line1 {
 	position: absolute;
-	right: 20px;
-	right: 30px;
+	right: 3vmin;
 	bottom: 0;
-	top: 0;
-	width: 30px;
-	height: 20vh;
-	background-color: #fff;
+	top: 6vmin;
+	width: 60vw;
+	height: 1px;
+	background-color: #ddd;
 }
+
+.line2 {
+	position: absolute;
+	right: 3vmin;
+	bottom: 0;
+	top: 6vmin;
+	width: 15vmin;
+	height: 15vmin;
+	border-top: 1.5vmin solid #eee;
+	border-right: 1.5vmin solid #eee;
+	border-bottom: 1.5vmin solid transparent;
+	border-left: 1.5vmin solid transparent;
+}
+
+.line3 {
+	position: absolute;
+	left: 4vmin;
+	bottom: 6vmin;
+	width: 1px;
+	height: 20vmin;
+	background-color: #eee;
+}
+
+.line4 {
+	position: absolute;
+	left: 4vmin;
+	bottom: 6vmin;
+	width: 75vw;
+	height: 1px;
+	background-color: #eee;
+}
+
+.line5 {
+	position: absolute;
+	left: 4vmin;
+	bottom: 6vmin;
+	width: 3vmin;
+	height: 3vmin;
+	border-bottom: 3vmin solid #eee;
+	border-left: 3vmin solid #eee;
+	border-top: 3vmin solid transparent;
+	border-right: 3vmin solid transparent;
+}
+
