@@ -7,7 +7,7 @@
 	"license": "MIT",
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build"
+		"build": "vite build && cp -rf ./public/. ../hakidame/src/public/1/"
 	},
 	"workspaces": [
 		"packages/*"
@@ -29,6 +29,7 @@
 		"node": "16.16.0"
 	},
 	"dependencies": {
-		"@rollup/pluginutils": "^5.0.2"
+		"@rollup/pluginutils": "^5.0.2",
+		"terser": "^5.17.7"
 	}
 }
