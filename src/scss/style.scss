@@ -63,7 +63,7 @@ canvas {
 h1 {
 	position: absolute;
 	top: 7vh;
-	font-size: 21vmin;
+	font-size: 20vmin;
 	user-select: none;
 }
 
@@ -72,13 +72,14 @@ h1 {
 	text-align: right;
 	right: 0px;
 	bottom: 0.5vh;
-	font-size: 15vmin;
+	font-size: 12vmin;
 	max-width: 100%;
 	mix-blend-mode: difference;
 	line-height: 0.8em;
 	user-select: none;
+
 	a {
-		font-size: 12vmin;
+		font-size: 10vmin;
 		line-height: 1.2em;
 		transition: opacity 0.5s;
 		&:hover {
@@ -132,11 +133,11 @@ h1 {
 	position: absolute;
 	left: 4vmin;
 	bottom: 6vmin;
-	width: 3vmin;
-	height: 3vmin;
-	border-bottom: 3vmin solid #eee;
-	border-left: 3vmin solid #eee;
-	border-top: 3vmin solid transparent;
-	border-right: 3vmin solid transparent;
+	width: 2.5vmin;
+	height: 2.5vmin;
+	border-bottom: 2.5vmin solid #eee;
+	border-left: 2.5vmin solid #eee;
+	border-top: 2.5vmin solid transparent;
+	border-right: 2.5vmin solid transparent;
 }
 
