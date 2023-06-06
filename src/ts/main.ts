@@ -1,6 +1,7 @@
 import * as GLP from 'glpower';
 import { canvas } from './Globals';
 import { Scene } from "./Scene";
+import { config } from '../../config';
 
 class App {
 
@@ -10,6 +11,19 @@ class App {
 	private canvasWrap: HTMLElement;
 
 	constructor() {
+
+		const elm = document.createElement( "div" );
+		document.body.appendChild( elm );
+		elm.innerHTML = `
+			<div class="cw"></div>
+			<h1>HAKIDAME</h1>
+			<div class="text">
+				NO.${config.no}<br/>
+				TITLE:${config.title || 'None'}<br/>
+				DATE:2023/06/03<br />
+				<a href="../">../</a>
+			</div>
+		`;
 
 		this.canvasWrap = document.querySelector( '.cw' )!;
 

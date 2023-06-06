@@ -2,8 +2,9 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import glslify from 'rollup-plugin-glslify';
 import { visualizer } from 'rollup-plugin-visualizer';
+import { config } from './config';
 
-const basePath = '/1/';
+const basePath = `/${config.no}/`;
 
 export default defineConfig( {
 	root: 'src',

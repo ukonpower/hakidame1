@@ -9,6 +9,7 @@
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"allowSyntheticDefaultImports": true,
+		"allowJs": true,
 		"noEmit": true,
 		"rootDir": "./",
 		"baseUrl": ".",
