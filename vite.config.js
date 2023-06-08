@@ -2,7 +2,7 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import glslify from 'rollup-plugin-glslify';
 import { visualizer } from 'rollup-plugin-visualizer';
-import { config } from './config';
+import config from './config';
 
 const basePath = `/${config.no}/`;
 
