@@ -17,7 +17,7 @@ export class DustParticles extends Entity {
 
 		// geometry
 
-		const range = new GLP.Vector( 10.0, 5.0, 10.0 );
+		const range = new GLP.Vector( 10.0, 10.0, 10.0 );
 		const count = 300;
 
 		const positionArray = [];

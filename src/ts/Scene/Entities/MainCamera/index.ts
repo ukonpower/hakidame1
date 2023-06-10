@@ -27,6 +27,8 @@ export class MainCamera extends Entity {
 
 	private cameraComponent: RenderCamera;
 
+	private baseFov: number;
+
 	// common rendertarget
 
 	private rt1: GLP.GLPowerFrameBuffer;
@@ -402,6 +404,9 @@ export class MainCamera extends Entity {
 			lookAt.setTarget( root.getEntityByName( "CameraTarget" ) || null );
 			this.dofTarget = root.getEntityByName( 'CameraTargetDof' ) || null;
 
+			this.baseFov = this.cameraComponent.fov;
+			this.updateProjectionMatrix();
+
 		} );
 
 		this.on( "notice/sceneUpdated", () => {
@@ -507,8 +512,7 @@ export class MainCamera extends Entity {
 		this.rt2.setSize( e.resolution );
 		this.rt3.setSize( e.resolution );
 
-		this.cameraComponent.aspect = e.resolution.x / e.resolution.y;
-		this.cameraComponent.updateProjectionMatrix();
+		this.updateProjectionMatrix();
 
 		let scale = 2;
 
@@ -532,6 +536,14 @@ export class MainCamera extends Entity {
 		this.rtDofCoc.setSize( resolutionHalf );
 		this.rtDofBokeh.setSize( resolutionHalf );
 		this.rtDofComposite.setSize( this.resolution );
+
+	}
+
+	private updateProjectionMatrix() {
+
+		this.cameraComponent.aspect = this.resolution.x / this.resolution.y;
+		this.cameraComponent.fov = this.baseFov + Math.max( 0, 1 / this.cameraComponent.aspect - 1 ) * 25.0;
+		this.cameraComponent.updateProjectionMatrix();
 
 	}
 
